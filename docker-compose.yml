@@ -1,0 +1,71 @@
+# =============================================================================
+# CopyWise 本地编排（含前后端）
+# 启动：docker compose up -d
+# =============================================================================
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: copywise-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: copywise_root
+      MYSQL_DATABASE: copywise
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    ports:
+      - '3306:3306'
+    volumes:
+      - copywise-mysql-data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: copywise-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - copywise-redis-data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: copywise-api
+    restart: unless-stopped
+    depends_on:
+      - mysql
+      - redis
+    env_file:
+      - .env
+    ports:
+      - '3000:3000'
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  web:
+    build:
+      context: ../copywise-web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE: /api
+        VITE_APP_TITLE: "CopyWise 智能营销文案助手"
+    container_name: copywise-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '80:80'
+
+volumes:
+  copywise-mysql-data:
+  copywise-redis-data:
