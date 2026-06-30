@@ -44,6 +44,9 @@ services:
       - .env
     ports:
       - '3000:3000'
+    volumes:
+      # 上传图片落本地磁盘，挂出来便于回看与备份
+      - copywise-uploads:/app/uploads
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 10s
@@ -69,3 +72,4 @@ services:
 volumes:
   copywise-mysql-data:
   copywise-redis-data:
+  copywise-uploads:

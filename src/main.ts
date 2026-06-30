@@ -81,11 +81,10 @@ async function bootstrap(): Promise<void> {
         'JWT',
       )
       .addTag('Auth', '认证：注册 / 登录')
-      .addTag('Project', '项目：CRUD + 级联')
-      .addTag('AI', 'AI 文案生成（SSE）')
-      .addTag('Copy', '文案管理：列表 / 编辑 / 收藏 / 删除')
+      .addTag('Conversation', '对话与消息：CRUD / 提交用户消息')
+      .addTag('Upload', '图片上传')
+      .addTag('AI', 'AI 双版文案生成（SSE）')
       .addTag('Quota', '额度：今日剩余')
-      .addTag('Analytics', '数据看板')
       .addTag('Health', '健康检查')
       .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig);

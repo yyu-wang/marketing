@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-jwt';
 import { JwtPayload } from '../common/decorators/current-user.decorator';
+import { jwtExtractor } from './token-extractor';
 
 /**
  * JWT 鉴权策略
@@ -10,7 +11,7 @@ import { JwtPayload } from '../common/decorators/current-user.decorator';
  * 对应 PRD 4.2.3 节：除注册/登录外所有接口需携带 Authorization: Bearer <token>。
  *
  * 工作流程：
- *   1. 从请求头提取 Bearer Token；
+ *   1. 从请求提取 token（优先 Authorization 头；SSE 路由兜底读 query.token）；
  *   2. 用 JWT_SECRET 校验签名与过期时间；
  *   3. 通过则将 validate 返回值挂到 request.user；
  *   4. 失败由 JwtAuthGuard 统一返回 401。
@@ -28,7 +29,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new Error('环境变量 JWT_SECRET 未配置，服务无法启动');
     }
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: jwtExtractor,
       ignoreExpiration: false,
       secretOrKey: secret,
     });

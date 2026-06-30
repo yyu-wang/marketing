@@ -1,18 +1,24 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Observable } from 'rxjs';
-import { AIProvider } from './ai-provider.interface';
+import {
+  AIProvider,
+  ChatMessage,
+  GenerateStreamOptions,
+} from './ai-provider.interface';
 
 /**
- * 通义千问 Provider
+ * 通义千问 Provider（V2：多模态）
  *
  * 通过 DashScope OpenAI 兼容接口实现 SSE 流式生成。
  * 文档：https://help.aliyun.com/zh/dashscope/developer-reference/api-details
  *
  * 关键设计：
  *   - 直接以 fetch + ReadableStream 解析 SSE，避免引入额外依赖；
- *   - AbortSignal 支持上游超时熔断（PRD 5.4：>10s 提示失败）；
- *   - 解析 "data: {...}" 行 -> 抽取 delta.content。
+ *   - AbortSignal 支持上游超时熔断；
+ *   - 解析 "data: {...}" 行 -> 抽取 delta.content；
+ *   - 自动判定模型：当任一 message 含 image_url → 切到 vision 模型
+ *     （默认 qwen-vl-max-latest），否则用文本模型（默认 qwen-turbo）。
  */
 @Injectable()
 export class QwenProvider implements AIProvider {
@@ -21,7 +27,8 @@ export class QwenProvider implements AIProvider {
 
   private readonly apiKey: string;
   private readonly baseUrl: string;
-  private readonly model: string;
+  private readonly textModel: string;
+  private readonly visionModel: string;
 
   constructor(config: ConfigService) {
     this.apiKey = config.get<string>('AI_API_KEY', '');
@@ -29,43 +36,55 @@ export class QwenProvider implements AIProvider {
       'AI_BASE_URL',
       'https://dashscope.aliyuncs.com',
     );
-    this.model = config.get<string>('AI_MODEL', 'qwen-turbo');
+    this.textModel = config.get<string>('AI_MODEL', 'qwen-turbo');
+    // 含图请求所用模型；默认与 textModel 一致，便于 omni 多模态模型直接复用
+    this.visionModel = config.get<string>(
+      'AI_VISION_MODEL',
+      this.textModel,
+    );
   }
 
-  generateStream(prompt: string, signal?: AbortSignal): Observable<string> {
+  generateStream(
+    messages: ChatMessage[],
+    options?: GenerateStreamOptions,
+  ): Observable<string> {
     return new Observable<string>((subscriber) => {
       const controller = new AbortController();
-      // 上游 signal 触发时同步中止本次请求
+      const signal = options?.signal;
       signal?.addEventListener('abort', () => controller.abort());
+
+      const hasImage = messages.some(
+        (m) =>
+          Array.isArray(m.content) &&
+          m.content.some((part) => part.type === 'image_url'),
+      );
+      const model =
+        options?.model ?? (hasImage ? this.visionModel : this.textModel);
 
       (async () => {
         try {
-          const resp = await fetch(
-            `${this.baseUrl}/compatible-mode/v1/chat/completions`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: `Bearer ${this.apiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                model: this.model,
-                stream: true,
-                messages: [
-                  { role: 'system', content: '你是一位资深中文营销文案撰写专家。' },
-                  { role: 'user', content: prompt },
-                ],
-              }),
-              signal: controller.signal,
+          const endpoint = this.buildEndpoint();
+          const resp = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
             },
-          );
+            body: JSON.stringify({
+              model,
+              stream: true,
+              messages,
+            }),
+            signal: controller.signal,
+          });
 
           if (!resp.ok || !resp.body) {
             const text = await resp.text().catch(() => '');
-            throw new Error(`AI 服务异常: ${resp.status} ${text.slice(0, 200)}`);
+            throw new Error(
+              `AI 服务异常: ${resp.status} ${text.slice(0, 200)}`,
+            );
           }
 
-          // 逐块解析 SSE
           const reader = resp.body.getReader();
           const decoder = new TextDecoder('utf-8');
           let buffer = '';
@@ -75,7 +94,6 @@ export class QwenProvider implements AIProvider {
             if (done) break;
             buffer += decoder.decode(value, { stream: true });
 
-            // SSE 以双换行分隔事件
             const events = buffer.split('\n\n');
             buffer = events.pop() ?? '';
 
@@ -93,7 +111,6 @@ export class QwenProvider implements AIProvider {
                   json?.choices?.[0]?.delta?.content;
                 if (delta) subscriber.next(delta);
               } catch (e) {
-                // 单条解析失败不影响整体；记录后继续
                 this.logger.warn(`SSE 解析失败: ${(e as Error).message}`);
               }
             }
@@ -104,8 +121,20 @@ export class QwenProvider implements AIProvider {
         }
       })();
 
-      // 上游取消订阅时主动 abort
       return () => controller.abort();
     });
+  }
+
+  /**
+   * 兼容多种 AI_BASE_URL 配置：
+   *   - 完整 endpoint（已带 /chat/completions）：直接用
+   *   - 已带 /v1 或 /compatible-mode/v1：补 /chat/completions
+   *   - 仅域名：补 /compatible-mode/v1/chat/completions
+   */
+  private buildEndpoint(): string {
+    const base = this.baseUrl.replace(/\/+$/, '');
+    if (/\/chat\/completions$/.test(base)) return base;
+    if (/\/v1$/.test(base)) return `${base}/chat/completions`;
+    return `${base}/compatible-mode/v1/chat/completions`;
   }
 }

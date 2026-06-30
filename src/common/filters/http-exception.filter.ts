@@ -38,7 +38,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const payload = exception.getResponse();
-      apiResponse = this.transformHttpExceptionPayload(payload);
+      apiResponse = this.transformHttpExceptionPayload(payload, status);
     } else {
       // 兜底：未识别的服务器异常
       status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -58,13 +58,17 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
   /**
    * 将 NestJS 内置异常 payload 转换为 PRD 9.3 格式
+   * 业务 code 与 HTTP status 对齐：401/403/409 等不再被统一改写为 400。
    * - ValidationPipe 抛出的 BadRequestException 形如
    *   { message: string[], error: 'Bad Request' }，需转为 details 数组；
    * - 业务异常形如 { message: '...', code?: 123 }，直接透传。
    */
-  private transformHttpExceptionPayload(payload: unknown): ApiResponse {
+  private transformHttpExceptionPayload(
+    payload: unknown,
+    status: number,
+  ): ApiResponse {
     if (typeof payload === 'string') {
-      return ApiResponse.error(400, payload);
+      return ApiResponse.error(status, payload);
     }
 
     if (payload && typeof payload === 'object') {
@@ -76,7 +80,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
       // 类级校验错误：message 为数组
       if (Array.isArray(obj.message) && obj.message.length > 0) {
-        return ApiResponse.error(400, '请求参数错误', obj.message);
+        return ApiResponse.error(status, '请求参数错误', obj.message);
       }
 
       // 业务自定义错误
@@ -85,12 +89,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
         obj.error ||
         '请求异常';
       return ApiResponse.error(
-        400,
+        status,
         message,
         Array.isArray(obj.details) ? obj.details : undefined,
       );
     }
 
-    return ApiResponse.error(400, '请求异常');
+    return ApiResponse.error(status, '请求异常');
   }
 }
