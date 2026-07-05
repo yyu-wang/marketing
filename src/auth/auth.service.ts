@@ -91,6 +91,23 @@ export class AuthService {
   }
 
   /**
+   * 按 ID 查询用户信息（调试/排查使用）
+   *
+   * 说明：这里使用 TypeORM 的 Repository.findOne 进行精确查询。
+   * 在控制台中打印查询结果，便于定位数据。实际项目中建议避免把
+   * passwordHash 直接返回给前端。
+   */
+  async findUserById(userId: number): Promise<Partial<UserEntity> | null> {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      select: ['id', 'email', 'createdAt', 'updatedAt'],
+    });
+
+    console.log('[findUserById] 查询结果:', user);
+    return user;
+  }
+
+  /**
    * 签发 JWT
    *
    * 签名密钥与有效期从环境变量读取（JWT_SECRET / JWT_EXPIRES_IN）。

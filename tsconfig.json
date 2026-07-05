@@ -9,16 +9,20 @@
     "esModuleInterop": true,
     "target": "ES2022",
     "sourceMap": true,
+    "rootDir": "./src",
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
+    "tsBuildInfoFile": "./dist/tsconfig.tsbuildinfo",
     "skipLibCheck": true,
+    "ignoreDeprecations": "5.0",
     "strictNullChecks": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,
+    "types": ["node", "jest"],
     "paths": {
       "src/*": ["src/*"]
     }

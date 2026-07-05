@@ -124,4 +124,22 @@ describe('AuthService', () => {
       expect(result.userId).toBe(1);
     });
   });
+
+  describe('findUserById', () => {
+    it('按 id 查询用户时应返回安全字段并打印日志', async () => {
+      const user = {
+        id: 1,
+        email: 'a@b.com',
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2024-01-02T00:00:00.000Z'),
+      };
+      userRepo.findOne.mockResolvedValueOnce(user);
+
+      await expect(service.findUserById(1)).resolves.toEqual(user);
+      expect(userRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 1 },
+        select: ['id', 'email', 'createdAt', 'updatedAt'],
+      });
+    });
+  });
 });
