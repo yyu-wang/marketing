@@ -1,15 +1,15 @@
-import type { CopyChannel } from './copy'
+// AI SSE 事件载荷类型（V2 chat 模式）
 
-export type SseEventType = 'chunk' | 'copy' | 'done' | 'error'
+export type SseEventType = 'chunk' | 'result' | 'done' | 'error'
 
 export interface ChunkEvent {
   delta: string
 }
 
-export interface CopyEvent {
-  copyId: number
-  content: string
-  channel: CopyChannel
+export interface ResultEvent {
+  messageId: number
+  xiaohongshu: string
+  moments: string
 }
 
 export interface DoneEvent {
@@ -19,9 +19,4 @@ export interface DoneEvent {
 
 export interface ErrorEventPayload {
   message: string
-}
-
-export interface GenerateStreamParams {
-  projectId: number
-  channel: CopyChannel
 }

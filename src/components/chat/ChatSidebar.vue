@@ -1,0 +1,237 @@
+<template>
+  <aside class="chat-sidebar">
+    <div class="chat-sidebar__brand">
+      <span class="chat-sidebar__logo">CW</span>
+      <span class="chat-sidebar__name">CopyWise</span>
+    </div>
+
+    <el-button
+      class="chat-sidebar__new"
+      type="primary"
+      round
+      :icon="Plus"
+      @click="onNew"
+    >
+      新建对话
+    </el-button>
+
+    <div class="chat-sidebar__list" v-loading="store.listLoading">
+      <template v-if="store.list.length">
+        <div
+          v-for="group in store.list"
+          :key="group.date"
+          class="chat-sidebar__group"
+        >
+          <div class="chat-sidebar__group-title">{{ group.date }}</div>
+          <div
+            v-for="item in group.items"
+            :key="item.id"
+            class="chat-sidebar__item"
+            :class="{ 'is-active': item.id === store.currentId }"
+            @click="onOpen(item.id)"
+          >
+            <span class="chat-sidebar__item-title" :title="item.title">
+              {{ item.title }}
+            </span>
+            <el-dropdown
+              trigger="click"
+              @command="(cmd: string) => onAction(cmd, item)"
+              @click.stop
+            >
+              <el-icon class="chat-sidebar__item-more"><MoreFilled /></el-icon>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="rename">重命名</el-dropdown-item>
+                  <el-dropdown-item command="delete" divided>
+                    <span class="text-danger">删除</span>
+                  </el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </div>
+        </div>
+      </template>
+      <div v-else-if="!store.listLoading" class="chat-sidebar__empty">
+        暂无历史对话
+      </div>
+    </div>
+
+    <div class="chat-sidebar__footer">
+      <QuotaBadge />
+      <UserMenu />
+    </div>
+  </aside>
+</template>
+
+<script setup lang="ts">
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { MoreFilled, Plus } from '@element-plus/icons-vue'
+import { useConversationStore } from '@/stores/conversation'
+import QuotaBadge from '@/components/layout/QuotaBadge.vue'
+import UserMenu from '@/components/layout/UserMenu.vue'
+import type { ConversationSummary } from '@/types/conversation'
+
+const store = useConversationStore()
+const router = useRouter()
+
+function onNew() {
+  store.newConversation()
+  void router.push('/')
+}
+
+function onOpen(id: number) {
+  if (store.currentId === id) return
+  void router.push(`/c/${id}`)
+}
+
+async function onAction(cmd: string, item: ConversationSummary) {
+  if (cmd === 'rename') {
+    try {
+      const { value } = await ElMessageBox.prompt('请输入新的标题', '重命名对话', {
+        inputValue: item.title,
+        inputValidator: (v) =>
+          (v && v.trim().length > 0 && v.trim().length <= 60) ||
+          '标题长度需在 1-60 之间',
+      })
+      const newTitle = value.trim()
+      // 先切到目标对话以便 store.renameCurrent 可用
+      if (store.currentId !== item.id) await store.open(item.id)
+      await store.renameCurrent(newTitle)
+      ElMessage.success('已重命名')
+    } catch {
+      /* 用户取消 */
+    }
+  } else if (cmd === 'delete') {
+    try {
+      await ElMessageBox.confirm('确定删除这条对话吗？此操作不可恢复。', '删除对话', {
+        type: 'warning',
+      })
+      await store.remove(item.id)
+      ElMessage.success('已删除')
+      if (store.currentId === null) void router.push('/')
+    } catch {
+      /* 用户取消 */
+    }
+  }
+}
+</script>
+
+<style scoped lang="scss">
+@use '@/styles/variables.scss' as *;
+
+.chat-sidebar {
+  width: 260px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 18px 14px;
+  background: rgba(10, 10, 20, 0.55);
+  backdrop-filter: blur(18px);
+  border-right: 1px solid $border-color;
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 6px 16px;
+  }
+
+  &__logo {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: $primary-gradient;
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  &__name {
+    font-weight: 600;
+    font-size: 16px;
+    color: $text-primary;
+  }
+
+  &__new {
+    margin: 4px 0 18px;
+    width: 100%;
+  }
+
+  &__list {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+
+  &__group + &__group {
+    margin-top: 12px;
+  }
+
+  &__group-title {
+    font-size: 12px;
+    color: $text-muted;
+    padding: 0 8px 6px;
+    letter-spacing: 0.5px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    color: $text-secondary;
+    font-size: 13px;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: $bg-card-hover;
+      color: $text-primary;
+    }
+
+    &.is-active {
+      background: rgba(124, 92, 255, 0.18);
+      color: $text-primary;
+    }
+  }
+
+  &__item-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__item-more {
+    color: $text-muted;
+    cursor: pointer;
+    padding: 2px;
+
+    &:hover {
+      color: $text-primary;
+    }
+  }
+
+  &__empty {
+    color: $text-muted;
+    font-size: 13px;
+    text-align: center;
+    padding: 24px 0;
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding-top: 14px;
+    border-top: 1px solid $border-color;
+  }
+}
+</style>

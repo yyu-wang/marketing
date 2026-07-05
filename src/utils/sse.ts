@@ -4,15 +4,14 @@ import router from '@/router'
 import { useAuthStore } from '@/stores/auth'
 import type {
   ChunkEvent,
-  CopyEvent,
   DoneEvent,
   ErrorEventPayload,
-  GenerateStreamParams,
+  ResultEvent,
 } from '@/types/ai'
 
-export interface SseHandlers {
+export interface ChatSseHandlers {
   onChunk?: (payload: ChunkEvent) => void
-  onCopy?: (payload: CopyEvent) => void
+  onResult?: (payload: ResultEvent) => void
   onDone?: (payload: DoneEvent) => void
   onError?: (message: string) => void
   onClose?: () => void
@@ -23,32 +22,41 @@ export interface StreamHandle {
 }
 
 /**
- * 兼容 fetch + ReadableStream 的 SSE 流式生成。
- * 后端 SSE event 类型有：chunk / copy / done / error，
- * data 字段是 JSON.stringify 后的字符串。
+ * 调用 /api/ai/chat/stream 进行双版文案流式生成。
+ *
+ * 前置：先通过 POST /api/conversations/:id/messages 落 user 消息得到 assistantMessageId。
+ *
+ * SSE 事件：
+ *   - chunk  原始增量片段（打字机展示用）
+ *   - result 结构化两版文案 { xiaohongshu, moments, messageId }
+ *   - done   生成完成 + 剩余额度
+ *   - error  异常
+ *
+ * 鉴权：浏览器 EventSource 无法设 header → 走 query.token 兜底；
+ * fetch-event-source 这里同时给 header 与 query，双保险。
  */
-export function generateStream(
-  params: GenerateStreamParams,
-  handlers: SseHandlers,
+export function chatStream(
+  assistantMessageId: number,
+  handlers: ChatSseHandlers,
 ): StreamHandle {
   const controller = new AbortController()
   const auth = useAuthStore()
   const baseURL = import.meta.env.VITE_API_BASE || '/api'
-  const url = `${baseURL}/ai/generate/stream?projectId=${encodeURIComponent(
-    String(params.projectId),
-  )}&channel=${encodeURIComponent(params.channel)}`
+  const token = auth.token ?? ''
+  const url = `${baseURL}/ai/chat/stream?assistantMessageId=${encodeURIComponent(
+    String(assistantMessageId),
+  )}${token ? `&token=${encodeURIComponent(token)}` : ''}`
 
   void fetchEventSource(url, {
     method: 'GET',
-    headers: auth.token
-      ? {
-          Authorization: `Bearer ${auth.token}`,
-        }
-      : undefined,
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     signal: controller.signal,
     openWhenHidden: true,
     async onopen(response) {
-      if (response.ok && response.headers.get('content-type')?.includes(EventStreamContentType)) {
+      if (
+        response.ok &&
+        response.headers.get('content-type')?.includes(EventStreamContentType)
+      ) {
         return
       }
       if (response.status === 401) {
@@ -73,14 +81,16 @@ export function generateStream(
           case 'chunk':
             handlers.onChunk?.(payload as ChunkEvent)
             break
-          case 'copy':
-            handlers.onCopy?.(payload as CopyEvent)
+          case 'result':
+            handlers.onResult?.(payload as ResultEvent)
             break
           case 'done':
             handlers.onDone?.(payload as DoneEvent)
             break
           case 'error':
-            handlers.onError?.((payload as ErrorEventPayload).message || '生成失败')
+            handlers.onError?.(
+              (payload as ErrorEventPayload).message || '生成失败',
+            )
             break
         }
       } catch (err) {
@@ -89,7 +99,6 @@ export function generateStream(
     },
     onerror(err) {
       handlers.onError?.(err instanceof Error ? err.message : '生成连接异常')
-      // 抛出以终止重试
       throw err
     },
     onclose() {

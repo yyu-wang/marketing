@@ -56,7 +56,7 @@ const onCommand = async (command: string) => {
 
   &__email {
     font-size: 13px;
-    color: #1f2329;
+    color: rgba(241, 242, 246, 0.78);
     max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;

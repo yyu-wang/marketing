@@ -20,28 +20,25 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/components/layout/AppLayout.vue'),
     meta: { requiresAuth: true },
     children: [
-      { path: '', redirect: '/projects' },
       {
-        path: 'projects',
-        name: 'projects',
-        component: () => import('@/views/ProjectsView.vue'),
-        meta: { title: '我的项目' },
+        path: '',
+        name: 'chat-home',
+        component: () => import('@/views/ChatView.vue'),
+        meta: { title: '新对话' },
       },
       {
-        path: 'projects/:id',
-        name: 'project-detail',
-        component: () => import('@/views/ProjectDetailView.vue'),
-        props: (route) => ({ id: Number(route.params.id) }),
-        meta: { title: '项目详情' },
-      },
-      {
-        path: 'dashboard',
-        name: 'dashboard',
-        component: () => import('@/views/DashboardView.vue'),
-        meta: { title: '数据看板' },
+        path: 'c/:id',
+        name: 'chat-conversation',
+        component: () => import('@/views/ChatView.vue'),
+        props: (route) => ({ conversationId: Number(route.params.id) }),
+        meta: { title: '对话' },
       },
     ],
   },
+  // 旧路由统一重定向到聊天首页
+  { path: '/projects', redirect: '/' },
+  { path: '/projects/:id', redirect: '/' },
+  { path: '/dashboard', redirect: '/' },
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',
@@ -64,7 +61,7 @@ router.beforeEach((to) => {
     return { path: '/login', query: { redirect: to.fullPath } }
   }
   if (auth.isLoggedIn && (to.path === '/login' || to.path === '/register')) {
-    return { path: '/projects' }
+    return { path: '/' }
   }
   return true
 })

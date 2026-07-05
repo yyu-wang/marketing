@@ -132,45 +132,96 @@ const onSubmit = async (instance: FormInstance | null) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f0f3ff, #fbf7ff);
+  background: linear-gradient(135deg, #eef2ff, #faf5ff);
   padding: 24px;
+  color: #1f2937;
 }
 
 .auth-card {
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   background: #ffffff;
-  padding: 40px 36px;
-  border-radius: 16px;
-  box-shadow: 0 16px 40px rgba(15, 36, 81, 0.08);
+  padding: 48px 40px;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(99, 102, 241, 0.15);
 
   &__header {
-    margin-bottom: 28px;
+    margin-bottom: 32px;
+    text-align: center;
+
     h1 {
-      margin: 0 0 8px;
-      font-size: 24px;
+      margin: 0 0 10px;
+      font-size: 28px;
+      font-weight: 700;
+      color: #111827;
+      letter-spacing: -0.02em;
     }
     p {
       margin: 0;
-      color: #646a73;
-      font-size: 13px;
+      color: #6b7280;
+      font-size: 15px;
+      line-height: 1.6;
     }
   }
 
   &__submit {
     width: 100%;
     margin-top: 8px;
+    height: 48px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
   }
 
   &__footer {
-    margin-top: 24px;
+    margin-top: 28px;
     text-align: center;
-    font-size: 13px;
-    color: #646a73;
+    font-size: 14px;
+    color: #6b7280;
+
     a {
-      color: #409eff;
-      margin-left: 4px;
+      color: #6366f1;
+      margin-left: 6px;
+      font-weight: 600;
+      text-decoration: none;
+
+      &:hover {
+        color: #4f46e5;
+      }
     }
+  }
+}
+
+:deep(.el-form-item__label) {
+  color: #374151 !important;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+:deep(.el-input__wrapper) {
+  background-color: #f9fafb;
+  border-radius: 10px;
+  padding: 4px 14px;
+  box-shadow: 0 0 0 1px #e5e7eb inset;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: 0 0 0 1px #c7d2fe inset;
+  }
+
+  &.is-focus {
+    box-shadow: 0 0 0 2px #6366f1 inset;
+    background-color: #ffffff;
+  }
+}
+
+:deep(.el-input__inner) {
+  color: #111827;
+  font-size: 15px;
+  height: 44px;
+
+  &::placeholder {
+    color: #9ca3af;
   }
 }
 </style>

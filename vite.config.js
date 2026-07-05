@@ -35,6 +35,11 @@ export default defineConfig({
                     });
                 },
             },
+            // 后端 ServeStatic 把上传图片放在 /uploads，开发期一并代理
+            '/uploads': {
+                target: 'http://localhost:3000',
+                changeOrigin: true,
+            },
         },
     },
     build: {
@@ -44,7 +49,6 @@ export default defineConfig({
                 manualChunks: {
                     vue: ['vue', 'vue-router', 'pinia'],
                     element: ['element-plus', '@element-plus/icons-vue'],
-                    echarts: ['echarts', 'vue-echarts'],
                 },
             },
         },
