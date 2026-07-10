@@ -1,22 +1,23 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { ROUTE_PATH } from './routes'
 
 const routes: RouteRecordRaw[] = [
   {
-    path: '/login',
+    path: ROUTE_PATH.LOGIN,
     name: 'login',
     component: () => import('@/views/LoginView.vue'),
     meta: { public: true, title: '登录' },
   },
   {
-    path: '/register',
+    path: ROUTE_PATH.REGISTER,
     name: 'register',
     component: () => import('@/views/RegisterView.vue'),
     meta: { public: true, title: '注册' },
   },
   {
-    path: '/',
+    path: ROUTE_PATH.HOME,
     component: () => import('@/components/layout/AppLayout.vue'),
     meta: { requiresAuth: true },
     children: [
@@ -35,12 +36,8 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-  // 旧路由统一重定向到聊天首页
-  { path: '/projects', redirect: '/' },
-  { path: '/projects/:id', redirect: '/' },
-  { path: '/dashboard', redirect: '/' },
   {
-    path: '/:pathMatch(.*)*',
+    path: ROUTE_PATH.NOT_FOUND,
     name: 'not-found',
     component: () => import('@/views/NotFoundView.vue'),
     meta: { public: true, title: '页面不存在' },
@@ -58,10 +55,10 @@ router.beforeEach((to) => {
   document.title = to.meta?.title ? `${to.meta.title} - ${baseTitle}` : baseTitle
 
   if (to.meta?.requiresAuth && !auth.isLoggedIn) {
-    return { path: '/login', query: { redirect: to.fullPath } }
+    return { path: ROUTE_PATH.LOGIN, query: { redirect: to.fullPath } }
   }
-  if (auth.isLoggedIn && (to.path === '/login' || to.path === '/register')) {
-    return { path: '/' }
+  if (auth.isLoggedIn && (to.path === ROUTE_PATH.LOGIN || to.path === ROUTE_PATH.REGISTER)) {
+    return { path: ROUTE_PATH.HOME }
   }
   return true
 })

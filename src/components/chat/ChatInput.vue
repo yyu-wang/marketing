@@ -125,15 +125,20 @@ async function onFileChange(e: Event) {
   uploading.value = true
   const uploaded: string[] = []
 
-  for (const file of toUpload) {
-    try {
-      const res = await uploadImage(file)
-      uploaded.push(res.url)
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : '图片上传失败'
+  const results = await Promise.allSettled(
+    toUpload.map((file) => uploadImage(file)),
+  )
+
+  let hasError = false
+  for (const result of results) {
+    if (hasError) break
+    if (result.status === 'fulfilled') {
+      uploaded.push(result.value.url)
+    } else {
+      const msg =
+        result.reason instanceof Error ? result.reason.message : '图片上传失败'
       ElMessage.error(msg)
-      // 中断剩余上传
-      break
+      hasError = true
     }
   }
 

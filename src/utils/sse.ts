@@ -1,5 +1,6 @@
 import { EventStreamContentType, fetchEventSource } from '@microsoft/fetch-event-source'
 import router from '@/router'
+import { ROUTE_PATH } from '@/router/routes'
 import { useAuthStore } from '@/stores/auth'
 import type {
   ChunkEvent,
@@ -51,12 +52,11 @@ export function chatStream(
         response.ok &&
         response.headers.get('content-type')?.includes(EventStreamContentType)
       ) {
-        console.log('[SSE] 连接已建立')
         return
       }
       if (response.status === 401) {
         auth.clearSession()
-        await router.replace({ path: '/login' })
+        await router.replace({ path: ROUTE_PATH.LOGIN })
         throw new Error('登录已过期')
       }
       let message = `连接失败 (${response.status})`
@@ -77,10 +77,6 @@ export function chatStream(
 
         const eventType = outer.type
         const inner = outer.data ? (JSON.parse(outer.data) as Record<string, unknown>) : {}
-
-        if (eventType === 'chunk' || eventType === 'done') {
-          console.log('[SSE] 收到事件:', eventType, eventType === 'chunk' ? `delta:${(inner as { delta?: string }).delta?.slice(0, 20)}` : '')
-        }
 
         switch (eventType) {
           case 'chunk':

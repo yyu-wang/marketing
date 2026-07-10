@@ -2,6 +2,7 @@ import { http } from '@/utils/request'
 import type {
   ConversationDetail,
   ConversationGroup,
+  GetConversationParams,
   PostMessagePayload,
   PostMessageResult,
 } from '@/types/conversation'
@@ -15,8 +16,8 @@ export const createConversation = (title?: string) =>
     { title },
   )
 
-export const getConversation = (id: number) =>
-  http.get<ConversationDetail>(`/conversations/${id}`)
+export const getConversation = (id: number, params?: GetConversationParams) =>
+  http.get<ConversationDetail>(`/conversations/${id}`, { params })
 
 export const renameConversation = (id: number, title: string) =>
   http.patch<{ id: number; title: string }>(`/conversations/${id}`, { title })

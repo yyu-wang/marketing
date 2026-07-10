@@ -10,6 +10,7 @@ export interface Message {
   content: string | null
   imageUrls: string[] | null
   status: MessageStatus
+  errorMessage?: string
   createdAt: string
   updatedAt: string
 }
@@ -30,6 +31,14 @@ export interface ConversationDetail {
   title: string
   createdAt: string
   messages: Message[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface GetConversationParams {
+  page?: number
+  pageSize?: number
 }
 
 export interface PostMessagePayload {

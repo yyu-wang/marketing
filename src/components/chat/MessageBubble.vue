@@ -80,8 +80,8 @@
           <!-- 错误 -->
           <div v-else class="message-bubble__error">
             <el-icon><WarningFilled /></el-icon>
-            生成失败
-            <el-button v-if="onRetry" size="small" link @click="onRetry">
+            <span>{{ message.errorMessage || '生成失败' }}</span>
+            <el-button v-if="onRetry" size="small" type="danger" plain @click="onRetry">
               重试
             </el-button>
           </div>
@@ -231,7 +231,7 @@ defineProps<{
     white-space: pre-wrap;
     word-break: break-word;
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 8px;
   }
 
@@ -257,7 +257,7 @@ defineProps<{
   }
 
   &__streaming {
-    background: rgba(255, 255, 255, 0.04);
+    background: transparent;
   }
 
   &__caret {
@@ -273,7 +273,8 @@ defineProps<{
 
   &__error {
     display: inline-flex;
-    align-items: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
     gap: 6px;
     padding: 10px 14px;
     border-radius: 14px;
@@ -281,6 +282,11 @@ defineProps<{
     border: none;
     color: $color-danger;
     font-size: 13px;
+    word-break: break-word;
+
+    span {
+      white-space: pre-wrap;
+    }
   }
 }
 

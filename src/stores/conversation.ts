@@ -32,23 +32,6 @@ interface ConversationState {
   streamHandle: StreamHandle | null
 }
 
-/**
- * 对话主 Store。
- *
- * 状态：
- *   - list           侧边栏分组（今天/昨天/...）
- *   - current        当前打开的对话详情（含 messages）
- *   - streaming*     当前流式中的 assistant 消息及增量缓冲
- *
- * 流程（send）：
- *   1) 若无 current，先 POST /conversations 创建
- *   2) POST /conversations/:id/messages 落 user 消息，拿到 assistantMessageId
- *   3) 走 SSE chatStream(assistantMessageId)
- *      - chunk → 累积 delta，刷新 streamingDelta
- *      - result → 把两版文案写回 message
- *      - done → 清理状态 + 同步配额
- *      - error → 标记 message.status = 'error'
- */
 export const useConversationStore = defineStore('conversation', {
   state: (): ConversationState => ({
     list: [],
@@ -62,7 +45,15 @@ export const useConversationStore = defineStore('conversation', {
   }),
   getters: {
     currentId: (state) => state.current?.id ?? null,
-    messages: (state) => state.current?.messages ?? [],
+    /** 展示用（ASC），从服务器 DESC 返回后反转 */
+    messages: (state) => {
+      const msgs = state.current?.messages ?? []
+      return [...msgs].reverse()
+    },
+    hasMore: (state) => {
+      if (!state.current) return false
+      return state.current.page * state.current.pageSize < state.current.total
+    },
   },
   actions: {
     async fetchList() {
@@ -74,11 +65,29 @@ export const useConversationStore = defineStore('conversation', {
       }
     },
 
-    async open(id: number) {
+    async open(id: number, page = 1, pageSize = 50) {
       if (this.streaming) this.abortStream()
       this.detailLoading = true
       try {
-        this.current = await getConversation(id)
+        this.current = await getConversation(id, { page, pageSize })
+      } finally {
+        this.detailLoading = false
+      }
+    },
+
+    async loadMore() {
+      if (!this.current || this.detailLoading) return
+      const nextPage = this.current.page + 1
+      if ((nextPage - 1) * this.current.pageSize >= this.current.total) return
+      this.detailLoading = true
+      try {
+        const result = await getConversation(this.current.id, {
+          page: nextPage,
+          pageSize: this.current.pageSize,
+        })
+        this.current.messages = [...this.current.messages, ...result.messages]
+        this.current.page = result.page
+        this.current.total = result.total
       } finally {
         this.detailLoading = false
       }
@@ -93,7 +102,6 @@ export const useConversationStore = defineStore('conversation', {
     },
 
     async send(payload: SendPayload) {
-      console.log('[send] 步骤1: 开始发送')
       if (this.streaming) {
         ElMessage.warning('当前对话正在生成中，请稍候')
         return
@@ -111,6 +119,9 @@ export const useConversationStore = defineStore('conversation', {
           title: created.title,
           createdAt: created.createdAt,
           messages: [],
+          total: 0,
+          page: 1,
+          pageSize: 50,
         }
       }
 
@@ -120,10 +131,11 @@ export const useConversationStore = defineStore('conversation', {
       let result
       try {
         result = await postMessage(conversationId, payload)
-        console.log('[send] 步骤2: postMessage 成功, assistantMsgId=', result.assistantMessageId)
       } catch (err) {
-        const message = err instanceof Error ? err.message : '消息发送失败'
-        ElMessage.error(message)
+        // 拦截器已显示后端错误消息，此处不再重复提示。仅处理非 API 响应的意外 Error。
+        if (err instanceof Error && !(err as { response?: unknown }).response) {
+          ElMessage.error(err.message || '消息发送失败')
+        }
         return
       }
 
@@ -148,42 +160,54 @@ export const useConversationStore = defineStore('conversation', {
         createdAt: now,
         updatedAt: now,
       }
-      this.current.messages.push(userMsg, assistantMsg)
+      this.current.messages.unshift(assistantMsg, userMsg)
 
       // 3. 启动 SSE
-      this.streaming = true
-      this.streamingMessageId = assistantMsg.id
-      this.streamingDelta = ''
-      console.log('[send] 步骤3: 启动 SSE, msgId=', assistantMsg.id)
+      this.startStream(assistantMsg.id)
+    },
 
-      this.streamHandle = chatStream(assistantMsg.id, {
+    startStream(assistantMsgId: number) {
+      this.streaming = true
+      this.streamingMessageId = assistantMsgId
+      this.streamingDelta = ''
+
+      this.streamHandle = chatStream(assistantMsgId, {
         onChunk: (e) => {
-          console.log('[send] onChunk: delta=', JSON.stringify(e.delta))
           this.streamingDelta += e.delta
         },
         onDone: () => {
-          console.log('[send] onDone')
-          const target = this.findMessage(assistantMsg.id)
+          const target = this.findMessage(assistantMsgId)
           if (target) {
             target.content = this.streamingDelta
             target.status = 'done'
           }
           this.finalizeStream()
-          // 异步刷新侧边栏（新建对话首次出现）
           void this.fetchList()
         },
         onError: (message) => {
-          console.log('[send] onError:', message)
-          const target = this.findMessage(assistantMsg.id)
-          if (target) target.status = 'error'
+          const target = this.findMessage(assistantMsgId)
+          if (target) {
+            target.status = 'error'
+            target.errorMessage = message
+          }
           ElMessage.error(message)
           this.finalizeStream()
         },
         onClose: () => {
-          console.log('[send] onClose')
           if (this.streaming) this.finalizeStream()
         },
       })
+    },
+
+    retryMessage(assistantMsgId: number) {
+      if (this.streaming) {
+        ElMessage.warning('当前对话正在生成中，请稍候')
+        return
+      }
+      const msg = this.findMessage(assistantMsgId)
+      if (!msg || msg.role !== 'assistant' || msg.status !== 'error') return
+
+      this.startStream(assistantMsgId)
     },
 
     abortStream() {

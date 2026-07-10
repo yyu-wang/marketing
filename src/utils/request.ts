@@ -2,6 +2,7 @@ import type { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import router from '@/router'
+import { ROUTE_PATH } from '@/router/routes'
 import { useAuthStore } from '@/stores/auth'
 import type { ApiErrorPayload, ApiResponse } from '@/types/api'
 
@@ -21,8 +22,8 @@ const redirectToLogin = async (): Promise<void> => {
   auth.clearSession()
   const current = router.currentRoute.value
   await router.replace({
-    path: '/login',
-    query: current.path === '/login' ? {} : { redirect: current.fullPath },
+    path: ROUTE_PATH.LOGIN,
+    query: current.path === ROUTE_PATH.LOGIN ? {} : { redirect: current.fullPath },
   })
   redirecting = false
 }
@@ -54,7 +55,7 @@ instance.interceptors.response.use(
   (error: AxiosError<ApiErrorPayload>) => {
     if (error.response?.status === 401 || error.response?.data?.code === 401) {
       void redirectToLogin()
-      ElMessage.error('登录已过期，请重新登录')
+      ElMessage.error(error.response?.data?.message || '登录已过期，请重新登录')
       return Promise.reject(error)
     }
 

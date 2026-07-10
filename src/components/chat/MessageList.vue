@@ -11,6 +11,11 @@
     </div>
 
     <div v-else class="message-list__inner">
+      <div v-if="store.hasMore" class="message-list__load-more">
+        <el-button :loading="store.detailLoading" text size="small" @click="store.loadMore()">
+          加载更早的消息
+        </el-button>
+      </div>
       <MessageBubble
         v-for="m in messages"
         :key="m.id"
@@ -18,13 +23,14 @@
         :streaming-delta="
           m.id === store.streamingMessageId ? store.streamingDelta : undefined
         "
+        :on-retry="m.role === 'assistant' && m.status === 'error' ? () => store.retryMessage(m.id) : undefined"
       />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick, ref, watch } from 'vue'
+import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import MessageBubble from './MessageBubble.vue'
 import { useConversationStore } from '@/stores/conversation'
 import type { Message } from '@/types/conversation'
@@ -33,6 +39,9 @@ const props = defineProps<{ messages: Message[] }>()
 const store = useConversationStore()
 const scrollRef = ref<HTMLElement | null>(null)
 
+let rafId = 0
+let prevScrollHeight = 0
+
 async function scrollToBottom() {
   await nextTick()
   const el = scrollRef.value
@@ -40,14 +49,42 @@ async function scrollToBottom() {
   el.scrollTop = el.scrollHeight
 }
 
-// 消息条数 / 流式增量 变更时滚到底
+function onScroll() {
+  const el = scrollRef.value
+  if (!el || !store.hasMore || store.detailLoading) return
+  if (el.scrollTop <= 80) {
+    prevScrollHeight = el.scrollHeight
+    void store.loadMore()
+  }
+}
+
+// Load more 后保持滚动位置
+watch(
+  () => store.detailLoading,
+  (loading, wasLoading) => {
+    if (wasLoading && !loading && prevScrollHeight > 0) {
+      void nextTick(() => {
+        const el = scrollRef.value
+        if (el) el.scrollTop = el.scrollHeight - prevScrollHeight
+        prevScrollHeight = 0
+      })
+    }
+  },
+)
+
+// 流式生成时 RAF 节流滚动到底部
 watch(
   () => [props.messages.length, store.streamingDelta],
   () => {
-    void scrollToBottom()
+    cancelAnimationFrame(rafId)
+    rafId = requestAnimationFrame(() => scrollToBottom())
   },
   { flush: 'post' },
 )
+
+onBeforeUnmount(() => {
+  cancelAnimationFrame(rafId)
+})
 </script>
 
 <style scoped lang="scss">
@@ -105,6 +142,11 @@ watch(
     font-size: 14px;
     line-height: 1.7;
     margin: 0;
+  }
+
+  &__load-more {
+    text-align: center;
+    padding: 4px 0 12px;
   }
 }
 </style>
