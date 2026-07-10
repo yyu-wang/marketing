@@ -166,37 +166,41 @@ export const useConversationStore = defineStore('conversation', {
       this.startStream(assistantMsg.id)
     },
 
-    startStream(assistantMsgId: number) {
+    startStream(assistantMsgId: number, continueFrom?: string) {
       this.streaming = true
       this.streamingMessageId = assistantMsgId
-      this.streamingDelta = ''
+      this.streamingDelta = continueFrom || ''
 
-      this.streamHandle = chatStream(assistantMsgId, {
-        onChunk: (e) => {
-          this.streamingDelta += e.delta
+      this.streamHandle = chatStream(
+        assistantMsgId,
+        {
+          onChunk: (e) => {
+            this.streamingDelta += e.delta
+          },
+          onDone: () => {
+            const target = this.findMessage(assistantMsgId)
+            if (target) {
+              target.content = this.streamingDelta
+              target.status = 'done'
+            }
+            this.finalizeStream()
+            void this.fetchList()
+          },
+          onError: (message) => {
+            const target = this.findMessage(assistantMsgId)
+            if (target) {
+              target.status = 'error'
+              target.errorMessage = message
+            }
+            ElMessage.error(message)
+            this.finalizeStream()
+          },
+          onClose: () => {
+            if (this.streaming) this.finalizeStream()
+          },
         },
-        onDone: () => {
-          const target = this.findMessage(assistantMsgId)
-          if (target) {
-            target.content = this.streamingDelta
-            target.status = 'done'
-          }
-          this.finalizeStream()
-          void this.fetchList()
-        },
-        onError: (message) => {
-          const target = this.findMessage(assistantMsgId)
-          if (target) {
-            target.status = 'error'
-            target.errorMessage = message
-          }
-          ElMessage.error(message)
-          this.finalizeStream()
-        },
-        onClose: () => {
-          if (this.streaming) this.finalizeStream()
-        },
-      })
+        continueFrom,
+      )
     },
 
     retryMessage(assistantMsgId: number) {
@@ -207,7 +211,9 @@ export const useConversationStore = defineStore('conversation', {
       const msg = this.findMessage(assistantMsgId)
       if (!msg || msg.role !== 'assistant' || msg.status !== 'error') return
 
-      this.startStream(assistantMsgId)
+      msg.status = 'streaming'
+      delete msg.errorMessage
+      this.startStream(assistantMsgId, msg.content || undefined)
     },
 
     abortStream() {

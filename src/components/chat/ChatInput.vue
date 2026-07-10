@@ -196,7 +196,7 @@ function submit() {
 
 .chat-input {
   width: 100%;
-  max-width: 760px;
+  max-width: 1000px;
   margin: 0 auto;
   padding: 14px 18px 12px;
   border-radius: 22px;

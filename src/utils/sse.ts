@@ -33,14 +33,18 @@ export interface StreamHandle {
 export function chatStream(
   assistantMessageId: number,
   handlers: ChatSseHandlers,
+  continueFrom?: string,
 ): StreamHandle {
   const controller = new AbortController()
   const auth = useAuthStore()
   const baseURL = import.meta.env.VITE_API_BASE || '/api'
   const token = auth.token ?? ''
-  const url = `${baseURL}/ai/chat/stream?assistantMessageId=${encodeURIComponent(
+  let url = `${baseURL}/ai/chat/stream?assistantMessageId=${encodeURIComponent(
     String(assistantMessageId),
   )}`
+  if (continueFrom) {
+    url += `&continueFrom=${encodeURIComponent(continueFrom)}`
+  }
 
   void fetchEventSource(url, {
     method: 'GET',
