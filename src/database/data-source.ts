@@ -2,7 +2,6 @@ import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
 import { CopyEntity } from './entities/copy.entity';
 import { ProjectEntity } from './entities/project.entity';
-import { QuotaRecordEntity } from './entities/quota-record.entity';
 import { UserEntity } from './entities/user.entity';
 import { ConversationEntity } from './entities/conversation.entity';
 import { MessageEntity } from './entities/message.entity';
@@ -15,12 +14,11 @@ export default new DataSource({
   port: Number(process.env.DB_PORT ?? 3306),
   username: process.env.DB_USERNAME ?? 'root',
   password: process.env.DB_PASSWORD ?? '',
-  database: process.env.DB_DATABASE ?? 'copywise',
+  database: process.env.DB_DATABASE ?? 'marketing_wise',
   entities: [
     UserEntity,
     ProjectEntity,
     CopyEntity,
-    QuotaRecordEntity,
     ConversationEntity,
     MessageEntity,
   ],

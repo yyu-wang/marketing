@@ -1,5 +1,5 @@
 # =============================================================================
-# CopyWise 本地编排（含前后端）
+# Marketing Wise 本地编排（含前后端）
 # 启动：docker compose up -d
 # =============================================================================
 version: '3.8'
@@ -7,11 +7,11 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.0
-    container_name: copywise-mysql
+    container_name: marketing-wise-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: copywise_root
-      MYSQL_DATABASE: copywise
+      MYSQL_ROOT_PASSWORD: marketing_wise_root
+      MYSQL_DATABASE: marketing_wise
       TZ: Asia/Shanghai
     command:
       - --character-set-server=utf8mb4
@@ -20,22 +20,22 @@ services:
     ports:
       - '3306:3306'
     volumes:
-      - copywise-mysql-data:/var/lib/mysql
+      - marketing-wise-mysql-data:/var/lib/mysql
 
   redis:
     image: redis:7-alpine
-    container_name: copywise-redis
+    container_name: marketing-wise-redis
     restart: unless-stopped
     ports:
       - '6379:6379'
     volumes:
-      - copywise-redis-data:/data
+      - marketing-wise-redis-data:/data
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: copywise-api
+    container_name: marketing-wise-api
     restart: unless-stopped
     depends_on:
       - mysql
@@ -46,7 +46,7 @@ services:
       - '3000:3000'
     volumes:
       # 上传图片落本地磁盘，挂出来便于回看与备份
-      - copywise-uploads:/app/uploads
+      - marketing-wise-uploads:/app/uploads
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 10s
@@ -60,8 +60,8 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_API_BASE: /api
-        VITE_APP_TITLE: "CopyWise 智能营销文案助手"
-    container_name: copywise-web
+        VITE_APP_TITLE: "Marketing Wise 智能营销文案助手"
+    container_name: marketing-wise-web
     restart: unless-stopped
     depends_on:
       api:
@@ -70,6 +70,6 @@ services:
       - '80:80'
 
 volumes:
-  copywise-mysql-data:
-  copywise-redis-data:
-  copywise-uploads:
+  marketing-wise-mysql-data:
+  marketing-wise-redis-data:
+  marketing-wise-uploads:

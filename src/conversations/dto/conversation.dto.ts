@@ -1,4 +1,4 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateConversationDto {
@@ -23,9 +23,9 @@ export class PostMessageDto {
   @MaxLength(2000)
   text?: string;
 
-  @ApiProperty({ required: false, description: '已上传图片的相对 URL，如 /uploads/xxx.png' })
+  @ApiProperty({ required: false, description: '已上传图片 URL 数组，最多 9 张' })
   @IsOptional()
-  @IsString()
-  @MaxLength(500)
-  imageUrl?: string;
+  @IsArray()
+  @IsString({ each: true })
+  imageUrls?: string[];
 }

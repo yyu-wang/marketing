@@ -1,7 +1,7 @@
 {
-  "name": "copywise-server",
+  "name": "marketing-wise-server",
   "version": "1.0.0",
-  "description": "CopyWise 智能营销文案助手 - 后端服务 (NestJS)",
+  "description": "Marketing Wise 智能营销文案助手 - 后端服务 (NestJS)",
   "private": true,
   "license": "MIT",
   "scripts": {
@@ -33,15 +33,18 @@
     "@nestjs/swagger": "^7.4.0",
     "@nestjs/throttler": "^5.2.0",
     "@nestjs/typeorm": "^10.0.2",
+    "@types/sharp": "^0.31.1",
     "bcryptjs": "^2.4.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
+    "cos-nodejs-sdk-v5": "^2.15.4",
     "ioredis": "^5.4.1",
     "mysql2": "^3.10.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "sharp": "^0.35.3",
     "typeorm": "^0.3.20",
     "uuid": "^9.0.1"
   },

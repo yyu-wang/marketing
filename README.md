@@ -1,6 +1,6 @@
-# CopyWise 后端服务
+# Marketing Wise 后端服务
 
-智能营销文案助手（CopyWise）的后端实现，基于 **NestJS + TypeScript + MySQL + Redis**。  
+智能营销文案助手（Marketing Wise）的后端实现，基于 **NestJS + TypeScript + MySQL + Redis**。  
 对应《产品需求规格说明书 V1.0》MVP 范围。
 
 ## 目录结构

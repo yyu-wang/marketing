@@ -17,9 +17,8 @@ export type MessageStatus = 'pending' | 'streaming' | 'done' | 'error';
  * Message 消息实体
  *
  * 一条对话由多条消息组成，包含两类：
- *   - role='user'：用户输入，content 存文本，imageUrl 可空；
- *   - role='assistant'：AI 输出，content 存模型原始输出，
- *     xiaohongshu / moments 存结构化解析后的两版文案。
+ *   - role='user'：用户输入，content 存文本，imageUrls 存图片 URL 数组（JSON）；
+ *   - role='assistant'：AI 输出，content 存回复文本。
  *
  * status：assistant 消息的生成状态机
  *   pending → streaming → done|error
@@ -39,17 +38,17 @@ export class MessageEntity {
   @Column({ type: 'text', name: 'content', nullable: true })
   content: string | null;
 
-  /** 仅 user 消息使用：上传图片的相对 URL，如 /uploads/xxx.png */
-  @Column({ type: 'varchar', length: 500, name: 'image_url', nullable: true })
-  imageUrl: string | null;
-
-  /** 仅 assistant 消息使用：小红书版文案 */
-  @Column({ type: 'text', name: 'xiaohongshu', nullable: true })
-  xiaohongshu: string | null;
-
-  /** 仅 assistant 消息使用：朋友圈版文案 */
-  @Column({ type: 'text', name: 'moments', nullable: true })
-  moments: string | null;
+  /** 仅 user 消息使用：上传图片 URL 数组（JSON），最多 9 张 */
+  @Column({
+    type: 'text',
+    name: 'image_urls',
+    nullable: true,
+    transformer: {
+      to: (value: string[] | null) => (value ? JSON.stringify(value) : null),
+      from: (value: string | null) => (value ? JSON.parse(value) : null),
+    },
+  })
+  imageUrls: string[] | null;
 
   @Column({
     type: 'varchar',

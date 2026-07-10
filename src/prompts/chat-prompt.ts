@@ -1,64 +1,36 @@
-import { readFile } from 'fs/promises';
-import { join } from 'path';
+import sharp from 'sharp';
 import { ChatMessage } from '../ai-provider/ai-provider.interface';
 
-/**
- * 双版文案 chat prompt
- *
- * 设计要点：
- *   - system 中明确「同时产出小红书 + 朋友圈两版」并固定 JSON schema；
- *   - 用户内容采用 OpenAI 兼容多模态结构：[text, image_url?]；
- *   - 图片优先使用 data URL 喂给视觉模型，避免「Nest 本地 URL 外网不可达」问题，
- *     回退到绝对 URL（PUBLIC_BASE_URL + 相对路径）。
- */
+const MAX_WIDTH = 1200;
+const MAX_HEIGHT = 1200;
+const TARGET_MIN_BYTES = 500 * 1024;
+const TARGET_MAX_BYTES = 2 * 1024 * 1024;
+
 const SYSTEM_PROMPT = `你是一位资深中文营销文案撰写专家。
-用户会提供一段创作诉求文本，可能附带一张图片。请你认真观察图片细节
-（产品、场景、风格、色调、人物等），结合用户诉求，**同时产出两版文案**：
-
-- 「小红书」版：
-  · 200 字以内
-  · 风格活泼、富有 emoji、句式短促、有故事感
-  · 结尾带 2-4 个 # 话题标签
-  · 适合年轻女性用户、易引发互动
-
-- 「朋友圈」版：
-  · 120 字以内
-  · 自然口语、像朋友推荐、不夸张
-  · 含 1-2 个克制的 emoji
-  · 不要话题标签
-
-**严格按以下 JSON 输出，前后不要有任何解释、不要套 markdown 代码块：**
-{"xiaohongshu":"......","moments":"......"}`;
+用户会提供创作诉求，可能附带一张或多张图片。请你根据用户的需求，提供专业、有创意的文案建议。
+回答风格自然、专业，像一位经验丰富的营销顾问在与客户交流。
+如果用户提供了图片，请仔细观察图片中的细节（产品、场景、风格、色调、人物等），结合这些细节给出建议。`;
 
 export interface BuildChatPromptInput {
   text?: string;
-  /** 图片相对 URL，如 /uploads/xxx.png */
-  imageUrl?: string;
-  /** 公网可访问 base，例如 http://localhost:3000 */
-  publicBaseUrl?: string;
-  /** 是否优先把图片转 data URL（推荐 true，绕开外网回拉问题） */
+  /** 图片 URL 数组：COS 绝对 URL */
+  imageUrls?: string[];
+  /** 是否优先把图片转 data URL */
   preferDataUrl?: boolean;
 }
 
-/**
- * 构造 messages 数组
- *
- * 若 preferDataUrl=true 且 imageUrl 是相对 /uploads/...，
- * 会读取本地文件并转 base64 data URL。
- */
 export async function buildChatPrompt(
   input: BuildChatPromptInput,
 ): Promise<ChatMessage[]> {
-  const { text, imageUrl, publicBaseUrl, preferDataUrl = true } = input;
+  const { text, imageUrls, preferDataUrl = true } = input;
 
   const userParts: any[] = [];
 
-  if (imageUrl) {
-    const url = await resolveImageUrl(imageUrl, {
-      publicBaseUrl,
-      preferDataUrl,
-    });
-    userParts.push({ type: 'image_url', image_url: { url } });
+  if (imageUrls && imageUrls.length > 0) {
+    for (const url of imageUrls) {
+      const resolved = await resolveImageUrl(url, { preferDataUrl });
+      userParts.push({ type: 'image_url', image_url: { url: resolved } });
+    }
   }
 
   userParts.push({
@@ -74,79 +46,71 @@ export async function buildChatPrompt(
 
 async function resolveImageUrl(
   imageUrl: string,
-  opts: { publicBaseUrl?: string; preferDataUrl?: boolean },
+  opts: { preferDataUrl?: boolean },
 ): Promise<string> {
-  // 已是完整 URL 或 data URL：直接用
-  if (/^(https?:|data:)/.test(imageUrl)) {
+  if (imageUrl.startsWith('data:')) {
     return imageUrl;
   }
 
-  // 形如 /uploads/xxx.png
-  if (opts.preferDataUrl && imageUrl.startsWith('/uploads/')) {
+  if (opts.preferDataUrl) {
     try {
-      const abs = join(process.cwd(), imageUrl.replace(/^\//, ''));
-      const buf = await readFile(abs);
-      const ext = (imageUrl.split('.').pop() || 'png').toLowerCase();
-      const mime =
-        ext === 'jpg' || ext === 'jpeg'
-          ? 'image/jpeg'
-          : ext === 'webp'
-            ? 'image/webp'
-            : 'image/png';
-      return `data:${mime};base64,${buf.toString('base64')}`;
+      const resp = await fetch(imageUrl);
+      if (!resp.ok) {
+        throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
+      }
+      const rawBuf = Buffer.from(await resp.arrayBuffer());
+
+      if (rawBuf.length <= TARGET_MAX_BYTES) {
+        const ext = (imageUrl.split('.').pop() || 'png').toLowerCase();
+        const mime = getMime(ext);
+        return `data:${mime};base64,${rawBuf.toString('base64')}`;
+      }
+
+      const compressedBuf = await compressImage(rawBuf);
+      return `data:image/jpeg;base64,${compressedBuf.toString('base64')}`;
     } catch {
-      // 文件读不到则退到 URL
+      // 下载/转换失败则直接使用原始 URL
     }
   }
 
-  const base = (opts.publicBaseUrl ?? 'http://localhost:3000').replace(
-    /\/$/,
-    '',
-  );
-  return `${base}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+  return imageUrl;
 }
 
-/**
- * 从模型原始输出中解析出 { xiaohongshu, moments }
- *
- * 容错：
- *   1. 直接 JSON.parse；
- *   2. 失败则去除 ```json 包裹后重试；
- *   3. 仍失败则正则提取首个 {...} 子串；
- *   4. 最终失败：整段塞给 xiaohongshu，moments 留空。
- */
-export function parseDualOutput(raw: string): {
-  xiaohongshu: string;
-  moments: string;
-} {
-  const text = (raw || '').trim();
-  const tryParse = (s: string): any | null => {
-    try {
-      return JSON.parse(s);
-    } catch {
-      return null;
+function getMime(ext: string): string {
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  if (ext === 'webp') return 'image/webp';
+  return 'image/png';
+}
+
+async function compressImage(buf: Buffer): Promise<Buffer> {
+  const image = sharp(buf);
+  const meta = await image.metadata();
+
+  let width = meta.width ?? 1920;
+  let height = meta.height ?? 1080;
+
+  if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+    const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+  }
+
+  let quality = 80;
+  let compressedBuf = await image.clone().resize(width, height).jpeg({ quality }).toBuffer();
+
+  if (compressedBuf.length > TARGET_MAX_BYTES) {
+    while (quality > 20 && compressedBuf.length > TARGET_MAX_BYTES) {
+      quality -= 10;
+      compressedBuf = await image.clone().resize(width, height).jpeg({ quality }).toBuffer();
     }
-  };
-
-  let obj = tryParse(text);
-  if (!obj) {
-    const cleaned = text
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/```$/i, '')
-      .trim();
-    obj = tryParse(cleaned);
-  }
-  if (!obj) {
-    const m = text.match(/\{[\s\S]*\}/);
-    if (m) obj = tryParse(m[0]);
   }
 
-  if (obj && typeof obj === 'object') {
-    const xhs = String(obj.xiaohongshu ?? obj.xhs ?? '').trim();
-    const mom = String(obj.moments ?? obj.pyq ?? obj.wechat ?? '').trim();
-    if (xhs || mom) return { xiaohongshu: xhs, moments: mom };
+  if (compressedBuf.length < TARGET_MIN_BYTES && quality < 100) {
+    while (quality < 100 && compressedBuf.length < TARGET_MIN_BYTES) {
+      quality += 5;
+      compressedBuf = await image.clone().resize(width, height).jpeg({ quality }).toBuffer();
+    }
   }
 
-  return { xiaohongshu: text, moments: '' };
+  return compressedBuf;
 }

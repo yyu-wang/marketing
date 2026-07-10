@@ -3,7 +3,6 @@ import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { UserEntity } from './entities/user.entity';
 import { ProjectEntity } from './entities/project.entity';
 import { CopyEntity } from './entities/copy.entity';
-import { QuotaRecordEntity } from './entities/quota-record.entity';
 import { ConversationEntity } from './entities/conversation.entity';
 import { MessageEntity } from './entities/message.entity';
 
@@ -16,7 +15,7 @@ import { MessageEntity } from './entities/message.entity';
  *   - 实体显式声明，便于打包与测试时按需引入。
  *
  * V2 新增：ConversationEntity / MessageEntity（对话式图文创作）。
- * V1 旧实体（Project/Copy/QuotaRecord）保留以兼容旧数据。
+ * V1 旧实体（Project/Copy）保留以兼容旧数据。
  */
 export const createTypeOrmConfig = (
   config: ConfigService,
@@ -26,12 +25,11 @@ export const createTypeOrmConfig = (
   port: config.get<number>('DB_PORT', 3306),
   username: config.get<string>('DB_USERNAME', 'root'),
   password: config.get<string>('DB_PASSWORD', ''),
-  database: config.get<string>('DB_DATABASE', 'copywise'),
+  database: config.get<string>('DB_DATABASE', 'marketing_wise'),
   entities: [
     UserEntity,
     ProjectEntity,
     CopyEntity,
-    QuotaRecordEntity,
     ConversationEntity,
     MessageEntity,
   ],

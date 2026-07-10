@@ -37,9 +37,9 @@ async function bootstrap(): Promise<void> {
   const nodeEnv = config.get<string>('NODE_ENV', 'development');
   if (nodeEnv !== 'production') {
     const swaggerConfig = new DocumentBuilder()
-      .setTitle('CopyWise API')
+      .setTitle('Marketing Wise API')
       .setDescription(
-        'CopyWise 智能营销文案助手 后端接口文档（对应 PRD V1.0）。\n' +
+        'Marketing Wise 智能营销文案助手 后端接口文档（对应 PRD V1.0）。\n' +
           '- 统一响应：{ code, message, data }（PRD 9.2）\n' +
           '- 统一错误：{ code, message, details? }（PRD 9.3）\n' +
           '- 鉴权方式：Authorization: Bearer <JWT>',
@@ -58,7 +58,6 @@ async function bootstrap(): Promise<void> {
       .addTag('Conversation', '对话与消息：CRUD / 提交用户消息')
       .addTag('Upload', '图片上传')
       .addTag('AI', 'AI 双版文案生成（SSE）')
-      .addTag('Quota', '额度：今日剩余')
       .addTag('Health', '健康检查')
       .build();
     const document = SwaggerModule.createDocument(app, swaggerConfig);
@@ -77,7 +76,7 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(port);
   Logger.log(
-    `🚀 CopyWise server is listening on http://localhost:${port}/${GLOBAL_PREFIX}`,
+    `🚀 Marketing Wise server is listening on http://localhost:${port}/${GLOBAL_PREFIX}`,
     'Bootstrap',
   );
   if (nodeEnv !== 'production') {

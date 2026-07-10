@@ -39,14 +39,14 @@ export class ConversationsService {
   }
 
   /**
-   * 列表：按 updated_at desc 取出后端分组（今天 / 昨天 / 更早）。
+   * 列表：按 created_at desc 取出后端分组（今天 / 昨天 / 更早）。
    * 返回结构：
-   *   [{ date: '今天', items: [{id,title,updatedAt}] }, ...]
+   *   [{ date: '今天', items: [{id,title,createdAt}] }, ...]
    */
   async list(userId: number): Promise<
     Array<{
       date: string;
-      items: Array<{ id: number; title: string; updatedAt: Date }>;
+      items: Array<{ id: number; title: string; createdAt: Date }>;
     }>
   > {
     const list = await this.conversationRepo.find({
@@ -57,7 +57,7 @@ export class ConversationsService {
 
     const groups = new Map<
       string,
-      Array<{ id: number; title: string; updatedAt: Date }>
+      Array<{ id: number; title: string; createdAt: Date }>
     >();
     const todayKey = this.dateKey(new Date());
     const yesterday = new Date();
@@ -65,7 +65,7 @@ export class ConversationsService {
     const yesterdayKey = this.dateKey(yesterday);
 
     for (const c of list) {
-      const k = this.dateKey(c.updatedAt);
+      const k = this.dateKey(c.createdAt);
       let label: string;
       if (k === todayKey) label = '今天';
       else if (k === yesterdayKey) label = '昨天';
@@ -74,7 +74,7 @@ export class ConversationsService {
       groups.get(label)!.push({
         id: Number(c.id),
         title: c.title,
-        updatedAt: c.updatedAt,
+        createdAt: c.createdAt,
       });
     }
     return Array.from(groups.entries()).map(([date, items]) => ({
@@ -132,10 +132,11 @@ export class ConversationsService {
   async postMessage(
     userId: number,
     conversationId: number,
-    payload: { text?: string; imageUrl?: string },
+    payload: { text?: string; imageUrls?: string[] },
   ): Promise<{ userMessageId: number; assistantMessageId: number }> {
     const text = (payload.text ?? '').trim();
-    if (!text && !payload.imageUrl) {
+    const imageUrls = payload.imageUrls?.length ? payload.imageUrls : null;
+    if (!text && !imageUrls) {
       throw new BadRequestException('文本与图片至少需提供一项');
     }
 
@@ -152,7 +153,7 @@ export class ConversationsService {
         conversationId: conv.id,
         role: 'user',
         content: text || null,
-        imageUrl: payload.imageUrl ?? null,
+        imageUrls: imageUrls ?? null,
         status: 'done',
       }),
     );
@@ -217,9 +218,7 @@ export class ConversationsService {
 
   async updateAssistantMessage(
     assistantMessageId: number,
-    patch: Partial<
-      Pick<MessageEntity, 'content' | 'xiaohongshu' | 'moments' | 'status'>
-    >,
+    patch: Partial<Pick<MessageEntity, 'content' | 'status'>>,
   ): Promise<void> {
     await this.messageRepo.update(assistantMessageId, patch);
   }

@@ -8,7 +8,6 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { ProjectEntity } from './project.entity';
-import { QuotaRecordEntity } from './quota-record.entity';
 
 /**
  * User 用户实体
@@ -45,7 +44,4 @@ export class UserEntity {
   // -------------------------------------------------------------------
   @OneToMany(() => ProjectEntity, (project) => project.user)
   projects: ProjectEntity[];
-
-  @OneToMany(() => QuotaRecordEntity, (quota) => quota.user)
-  quotaRecords: QuotaRecordEntity[];
 }

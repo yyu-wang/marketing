@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  InternalServerErrorException,
   Logger,
   Post,
   UploadedFile,
@@ -14,40 +15,17 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { existsSync, mkdirSync } from 'fs';
+import { memoryStorage } from 'multer';
+import { extname } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import {
   CurrentUser,
   JwtPayload,
 } from '../common/decorators/current-user.decorator';
+import { CosService } from '../cos/cos.service';
 
-/**
- * 图片上传
- *
- * 路由：POST /api/upload
- *
- * 设计：
- *   - 仅接受 image/jpeg|png|webp，限制 5 MB；
- *   - 文件落本地磁盘 `uploads/`（容器内挂载 volume），
- *     由 ServeStaticModule 暴露为 `/uploads/*`；
- *   - 文件名 `${userId}-${uuid}.${ext}`，避免冲突且可溯源用户；
- *   - 返回相对 URL，前端可直接 <img :src> 展示，
- *     喂给视觉模型时由后端拼接 PUBLIC_BASE_URL 转绝对 URL。
- *
- * 注意：当前实现把图片转 data URL 喂给视觉模型作为兜底（见 chat-prompt.ts），
- * 此处 URL 主要用于历史记录回显。
- */
-const UPLOAD_DIR = 'uploads';
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
-const MAX_BYTES = 5 * 1024 * 1024; // 5 MB
-
-// 确保目录存在（启动期一次性创建）
-const ABS_UPLOAD_DIR = join(process.cwd(), UPLOAD_DIR);
-if (!existsSync(ABS_UPLOAD_DIR)) {
-  mkdirSync(ABS_UPLOAD_DIR, { recursive: true });
-}
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 
 @ApiTags('Upload')
 @ApiBearerAuth('JWT')
@@ -55,11 +33,13 @@ if (!existsSync(ABS_UPLOAD_DIR)) {
 export class UploadController {
   private readonly logger = new Logger(UploadController.name);
 
+  constructor(private readonly cosService: CosService) {}
+
   @Post()
   @ApiOperation({
     summary: '上传图片',
     description:
-      '接受 image/jpeg|png|webp，单文件 ≤ 5 MB。返回可静态访问的 URL（相对路径，前端补域名即可）。',
+      '接受 image/jpeg|png|webp，上传到腾讯云 COS。返回公网可访问的 URL。',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -72,20 +52,9 @@ export class UploadController {
   })
   @UseInterceptors(
     FileInterceptor('file', {
-      storage: diskStorage({
-        destination: ABS_UPLOAD_DIR,
-        filename: (req, file, cb) => {
-          const user = (req as any).user as JwtPayload | undefined;
-          const userId = user?.sub ?? 'anon';
-          const ext = (extname(file.originalname) || '').toLowerCase();
-          const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext)
-            ? ext
-            : '.png';
-          cb(null, `${userId}-${uuidv4()}${safeExt}`);
-        },
-      }),
-      limits: { fileSize: MAX_BYTES },
-      fileFilter: (req, file, cb) => {
+      storage: memoryStorage(),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (_req, file, cb) => {
         if (!ALLOWED_MIME.has(file.mimetype)) {
           cb(
             new BadRequestException(
@@ -106,12 +75,31 @@ export class UploadController {
     if (!file) {
       throw new BadRequestException('未接收到文件');
     }
+
+    const userId = user.sub;
+    const ext = extname(file.originalname).toLowerCase();
+    const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext)
+      ? ext
+      : '.png';
+    const filename = `uploads/${userId}-${uuidv4()}${safeExt}`;
+
+    if (!this.cosService.isAvailable()) {
+      throw new InternalServerErrorException(
+        'COS 对象存储服务不可用，请稍后重试',
+      );
+    }
+
+    const result = await this.cosService.upload(
+      filename,
+      file.buffer,
+      file.mimetype,
+    );
     this.logger.log(
-      `用户 ${user.sub} 上传图片 ${file.filename} (${file.size} bytes)`,
+      `用户 ${userId} 上传图片到 COS: ${filename} (${file.size} bytes)`,
     );
     return {
-      url: `/${UPLOAD_DIR}/${file.filename}`,
-      filename: file.filename,
+      url: result.url,
+      filename,
       size: file.size,
       mime: file.mimetype,
     };
