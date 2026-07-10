@@ -1,6 +1,12 @@
 # =============================================================================
 # Marketing Wise 本地编排（含前后端）
-# 启动：docker compose up -d
+#
+# 本地开发（仅基础设施）：
+#   docker compose up -d                    # MySQL + Redis
+#   npm run start:dev                       # NestJS 热重载，端口 3000
+#
+# 全容器启动（含应用 + 前端）：
+#   docker compose --profile full up -d     # 全部服务
 # =============================================================================
 version: '3.8'
 
@@ -10,8 +16,8 @@ services:
     container_name: marketing-wise-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: marketing_wise_root
-      MYSQL_DATABASE: marketing_wise
+      MYSQL_ROOT_PASSWORD: copywise_root
+      MYSQL_DATABASE: copywise
       TZ: Asia/Shanghai
     command:
       - --character-set-server=utf8mb4
@@ -32,6 +38,8 @@ services:
       - marketing-wise-redis-data:/data
 
   api:
+    profiles:
+      - full
     build:
       context: .
       dockerfile: Dockerfile
@@ -42,6 +50,9 @@ services:
       - redis
     env_file:
       - .env
+    environment:
+      DB_HOST: mysql
+      REDIS_HOST: redis
     ports:
       - '3000:3000'
     volumes:
@@ -55,6 +66,8 @@ services:
       start_period: 20s
 
   web:
+    profiles:
+      - full
     build:
       context: ../copywise-web
       dockerfile: Dockerfile

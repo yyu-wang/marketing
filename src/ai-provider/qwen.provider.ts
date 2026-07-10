@@ -37,11 +37,16 @@ export class QwenProvider implements AIProvider {
       'https://dashscope.aliyuncs.com',
     );
     this.textModel = config.get<string>('AI_MODEL', 'qwen-turbo');
-    // 含图请求所用模型；默认与 textModel 一致，便于 omni 多模态模型直接复用
     this.visionModel = config.get<string>(
       'AI_VISION_MODEL',
       this.textModel,
     );
+
+    if (!this.apiKey || this.apiKey === 'your_api_key_here') {
+      this.logger.error(
+        'AI_API_KEY 未配置或仍为占位值，AI 生成功能将不可用。请检查 .env 文件中的 AI_API_KEY 是否正确设置。',
+      );
+    }
   }
 
   generateStream(
