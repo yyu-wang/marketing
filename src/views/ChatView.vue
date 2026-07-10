@@ -5,7 +5,7 @@
     <main class="chat-view__main">
       <header class="chat-view__header">
         <div class="chat-view__title">
-          {{ store.current?.title ?? '新对话' }}
+          {{ store.current?.title ?? '新对话11' }}
         </div>
       </header>
 
