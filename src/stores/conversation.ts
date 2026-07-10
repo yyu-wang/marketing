@@ -215,7 +215,11 @@ export const useConversationStore = defineStore('conversation', {
       const target = this.streamingMessageId
         ? this.findMessage(this.streamingMessageId)
         : null
-      if (target && target.status === 'streaming') target.status = 'error'
+      if (target && target.status === 'streaming') {
+        target.content = this.streamingDelta || null
+        target.status = 'error'
+        target.errorMessage = '已中止生成'
+      }
       this.finalizeStream()
     },
 

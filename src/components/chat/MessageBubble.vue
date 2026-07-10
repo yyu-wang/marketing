@@ -63,27 +63,40 @@
             </template>
           </div>
 
-          <!-- 已完成：显示回复文本 -->
-          <div v-else-if="message.status === 'done'" class="message-bubble__text message-bubble__text--with-action">
-            <div class="message-bubble__text-body">{{ message.content }}</div>
-            <div class="message-bubble__action">
-              <CopyButton :text="message.content || ''" />
-            </div>
-          </div>
-
           <!-- pending（理论上很短暂） -->
           <div v-else-if="message.status === 'pending'" class="message-bubble__text">
             <el-icon class="is-loading"><Loading /></el-icon>
             <span>排队中...</span>
           </div>
 
-          <!-- 错误 -->
+          <!-- 已完成：显示回复文本 -->
+          <div v-else-if="message.status === 'done'" class="message-bubble__text">
+            <div class="message-bubble__text-body">{{ message.content }}</div>
+          </div>
+
+          <!-- 错误 / 已中止 -->
           <div v-else class="message-bubble__error">
-            <el-icon><WarningFilled /></el-icon>
-            <span>{{ message.errorMessage || '生成失败' }}</span>
-            <el-button v-if="onRetry" size="small" type="danger" plain @click="onRetry">
-              重试
-            </el-button>
+            <div v-if="message.content" class="message-bubble__text message-bubble__text--partial">
+              {{ message.content }}
+            </div>
+            <div class="message-bubble__error-bar">
+              <el-icon><WarningFilled /></el-icon>
+              <span>{{ message.errorMessage || '生成失败' }}</span>
+            </div>
+          </div>
+
+          <!-- 底部操作栏 -->
+          <div
+            v-if="message.status === 'done' || message.status === 'error'"
+            class="message-bubble__actions"
+          >
+            <CopyButton v-if="message.status === 'done'" :text="message.content || ''" />
+            <template v-if="message.status === 'error' && onRetry">
+              <el-button class="action-btn action-btn--retry" size="small" @click="onRetry">
+                <el-icon><RefreshRight /></el-icon>
+                <span class="action-btn__text">{{ message.errorMessage === '已中止生成' ? '继续' : '重试' }}</span>
+              </el-button>
+            </template>
           </div>
         </div>
       </template>
@@ -93,7 +106,7 @@
 </template>
 
 <script setup lang="ts">
-import { Loading, User, WarningFilled } from '@element-plus/icons-vue'
+import { Loading, RefreshRight, User, WarningFilled } from '@element-plus/icons-vue'
 import CopyButton from '@/components/common/CopyButton.vue'
 import type { Message } from '@/types/conversation'
 
@@ -230,25 +243,57 @@ defineProps<{
     line-height: 1.7;
     white-space: pre-wrap;
     word-break: break-word;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  &__text--with-action {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    align-items: start;
-    gap: 10px;
   }
 
   &__text-body {
     min-width: 0;
   }
 
-  &__action {
+  &__actions {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
+    gap: 6px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    margin-top: 2px;
+  }
+
+  .action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 28px;
+    padding: 0 8px;
+    border-radius: 8px;
+    background: transparent;
+    border: none;
+    color: $text-secondary;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &__text {
+      max-width: 0;
+      opacity: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+
+    &:hover {
+      background: rgba(124, 92, 255, 0.12);
+      color: $primary-color;
+
+      .action-btn__text {
+        max-width: 40px;
+        opacity: 1;
+      }
+    }
+
+    &--retry:hover {
+      background: rgba(248, 113, 113, 0.12);
+      color: $color-danger;
+    }
   }
 
   &--user &__text {
@@ -272,17 +317,30 @@ defineProps<{
   }
 
   &__error {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__text--partial {
+    color: $text-primary;
+    font-size: 14px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  &__error-bar {
     display: inline-flex;
-    align-items: flex-start;
+    align-items: center;
     flex-wrap: wrap;
     gap: 6px;
-    padding: 10px 14px;
+    padding: 8px 14px;
     border-radius: 14px;
     background: rgba(248, 113, 113, 0.12);
     border: none;
     color: $color-danger;
     font-size: 13px;
-    word-break: break-word;
 
     span {
       white-space: pre-wrap;

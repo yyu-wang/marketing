@@ -1,6 +1,6 @@
 <template>
   <div class="chat-input">
-    <div v-if="imageUrls.length > 0" class="chat-input__image-grid">
+    <div class="chat-input__image-row">
       <div
         v-for="(url, idx) in imageUrls"
         :key="url"
@@ -11,20 +11,20 @@
           <Close />
         </el-icon>
       </div>
+
+      <el-tooltip :content="uploadTip" placement="top">
+        <div
+          class="chat-input__upload-btn"
+          :class="{ 'is-disabled': disabled || imageUrls.length >= 9 }"
+          @click="triggerPick"
+        >
+          <el-icon v-if="!uploading"><Plus /></el-icon>
+          <el-icon v-else class="is-loading"><Loading /></el-icon>
+        </div>
+      </el-tooltip>
     </div>
 
     <div class="chat-input__row">
-      <el-tooltip :content="uploadTip" placement="top">
-        <el-button
-          class="chat-input__upload-btn"
-          :icon="Plus"
-          circle
-          :loading="uploading"
-          :disabled="disabled || imageUrls.length >= 9"
-          @click="triggerPick"
-        />
-      </el-tooltip>
-
       <textarea
         ref="textareaRef"
         v-model="text"
@@ -36,13 +36,24 @@
         @input="autoGrow"
       />
 
-      <el-tooltip :content="disabled ? '生成中...' : '发送'" placement="top">
+      <!-- 流式中：显示停止按钮 -->
+      <el-tooltip v-if="disabled" content="停止生成" placement="top">
+        <el-button
+          class="chat-input__send-btn chat-input__send-btn--stop"
+          type="danger"
+          circle
+          :icon="VideoPause"
+          @click="store.abortStream()"
+        />
+      </el-tooltip>
+
+      <!-- 空闲：显示发送按钮 -->
+      <el-tooltip v-else content="发送" placement="top">
         <el-button
           class="chat-input__send-btn"
           type="primary"
           circle
           :icon="Promotion"
-          :loading="disabled"
           :disabled="!canSend"
           @click="submit"
         />
@@ -67,8 +78,9 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Close, Plus, Promotion } from '@element-plus/icons-vue'
+import { Close, Loading, Plus, Promotion, VideoPause } from '@element-plus/icons-vue'
 import { uploadImage } from '@/api/upload'
+import { useConversationStore } from '@/stores/conversation'
 
 const MAX_IMAGES = 9
 
@@ -80,6 +92,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'submit', payload: { text?: string; imageUrls?: string[] }): void
 }>()
+
+const store = useConversationStore()
 
 const text = ref('')
 const imageUrls = ref<string[]>([])
@@ -154,7 +168,7 @@ function autoGrow() {
   const el = textareaRef.value
   if (!el) return
   el.style.height = 'auto'
-  const max = 6 * 24
+  const max = 6 * 20
   el.style.height = `${Math.min(el.scrollHeight, max)}px`
 }
 
@@ -191,11 +205,38 @@ function submit() {
   backdrop-filter: blur(20px);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
 
-  &__image-grid {
+  &__image-row {
     display: flex;
     flex-wrap: wrap;
+    align-items: center;
     gap: 8px;
     margin-bottom: 10px;
+  }
+
+  &__upload-btn {
+    width: 64px;
+    height: 64px;
+    border-radius: 10px;
+    border: 1px dashed $border-color-strong;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: $text-muted;
+    font-size: 20px;
+    flex-shrink: 0;
+    transition: all 0.2s;
+
+    &:hover {
+      border-color: $primary-color;
+      color: $primary-color;
+    }
+
+    &.is-disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
   }
 
   &__image-chip {
@@ -243,16 +284,17 @@ function submit() {
     border: none;
     outline: none;
     color: $text-primary;
-    font-size: 15px;
-    line-height: 24px;
+    font-size: 12px;
+    line-height: 20px;
     resize: none;
-    min-height: 24px;
-    max-height: 144px;
+    min-height: 20px;
+    max-height: 120px;
     font-family: inherit;
     padding: 6px 0;
 
     &::placeholder {
       color: $text-muted;
+      font-size: 12px;
     }
   }
 
@@ -267,9 +309,17 @@ function submit() {
     text-align: right;
   }
 
-  &__upload-btn,
   &__send-btn {
     flex-shrink: 0;
+
+    &--stop {
+      animation: stop-pulse 1.4s ease-in-out infinite;
+    }
   }
+}
+
+@keyframes stop-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.5); }
+  50% { box-shadow: 0 0 0 8px rgba(248, 113, 113, 0); }
 }
 </style>
