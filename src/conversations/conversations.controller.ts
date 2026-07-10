@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import {
@@ -16,35 +17,21 @@ import {
 import { ConversationsService } from './conversations.service';
 import {
   CreateConversationDto,
+  PaginationQueryDto,
   PostMessageDto,
   RenameConversationDto,
 } from './dto/conversation.dto';
 
-/**
- * 对话 / 消息 控制器
- *
- * 路由前缀：/api/conversations
- *
- * 路由清单：
- *   - GET    /api/conversations              侧边栏列表（按日期分组）
- *   - POST   /api/conversations              创建空对话
- *   - GET    /api/conversations/:id          对话详情（含全部 messages）
- *   - PATCH  /api/conversations/:id          重命名
- *   - DELETE /api/conversations/:id          删除（级联 messages）
- *   - POST   /api/conversations/:id/messages 落 user 消息 + assistant 占位，
- *                                            返回 { userMessageId, assistantMessageId }
- *                                            前端拿 assistantMessageId 调 SSE 端点
- */
 @ApiTags('Conversation')
 @ApiBearerAuth('JWT')
 @Controller('conversations')
 export class ConversationsController {
-  constructor(private readonly svc: ConversationsService) {}
+  constructor(private readonly service: ConversationsService) {}
 
   @Get()
   @ApiOperation({ summary: '对话列表（按日期分组）' })
   list(@CurrentUser() user: JwtPayload) {
-    return this.svc.list(user.sub);
+    return this.service.list(user.sub);
   }
 
   @Post()
@@ -53,17 +40,18 @@ export class ConversationsController {
     @CurrentUser() user: JwtPayload,
     @Body() dto: CreateConversationDto,
   ) {
-    const conv = await this.svc.create(user.sub, dto.title);
+    const conv = await this.service.create(user.sub, dto.title);
     return { id: Number(conv.id), title: conv.title, createdAt: conv.createdAt };
   }
 
   @Get(':id')
-  @ApiOperation({ summary: '对话详情（含全部消息）' })
+  @ApiOperation({ summary: '对话详情（含消息，分页）' })
   detail(
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseIntPipe) id: number,
+    @Query() pagination: PaginationQueryDto,
   ) {
-    return this.svc.getDetail(user.sub, id);
+    return this.service.getDetail(user.sub, id, pagination.page, pagination.pageSize);
   }
 
   @Patch(':id')
@@ -73,7 +61,7 @@ export class ConversationsController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: RenameConversationDto,
   ) {
-    const conv = await this.svc.rename(user.sub, id, dto.title);
+    const conv = await this.service.rename(user.sub, id, dto.title);
     return { id: Number(conv.id), title: conv.title };
   }
 
@@ -83,7 +71,7 @@ export class ConversationsController {
     @CurrentUser() user: JwtPayload,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    await this.svc.remove(user.sub, id);
+    await this.service.remove(user.sub, id);
     return { id };
   }
 
@@ -98,6 +86,6 @@ export class ConversationsController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: PostMessageDto,
   ) {
-    return this.svc.postMessage(user.sub, id, dto);
+    return this.service.postMessage(user.sub, id, dto);
   }
 }

@@ -22,6 +22,7 @@ import { MessageEntity } from './message.entity';
  *   - 删除对话级联删除其下所有 messages（DB ON DELETE CASCADE）。
  */
 @Entity('conversations')
+@Index('idx_conv_user_updated', ['userId', 'updatedAt'])
 export class ConversationEntity {
   @PrimaryGeneratedColumn({ type: 'bigint', name: 'id' })
   id: number;

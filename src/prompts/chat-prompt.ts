@@ -27,8 +27,10 @@ export async function buildChatPrompt(
   const userParts: any[] = [];
 
   if (imageUrls && imageUrls.length > 0) {
-    for (const url of imageUrls) {
-      const resolved = await resolveImageUrl(url, { preferDataUrl });
+    const resolvedUrls = await Promise.all(
+      imageUrls.map((url) => resolveImageUrl(url, { preferDataUrl })),
+    );
+    for (const resolved of resolvedUrls) {
       userParts.push({ type: 'image_url', image_url: { url: resolved } });
     }
   }

@@ -1,4 +1,5 @@
-import { IsArray, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsArray, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateConversationDto {
@@ -28,4 +29,24 @@ export class PostMessageDto {
   @IsArray()
   @IsString({ each: true })
   imageUrls?: string[];
+}
+
+const MESSAGE_PAGE_SIZE_DEFAULT = 50;
+const MESSAGE_PAGE_SIZE_MAX = 200;
+
+export class PaginationQueryDto {
+  @ApiProperty({ required: false, default: 1, description: '页码' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number = 1;
+
+  @ApiProperty({ required: false, default: MESSAGE_PAGE_SIZE_DEFAULT, description: '每页条数' })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(MESSAGE_PAGE_SIZE_MAX)
+  pageSize?: number = MESSAGE_PAGE_SIZE_DEFAULT;
 }

@@ -1,12 +1,9 @@
-import {
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { CopyChannel, CopyEntity } from '../database/entities/copy.entity';
 import { ProjectEntity } from '../database/entities/project.entity';
+import { findOwnedOrFail } from '../common/utils/ownership';
 import { UpdateCopyDto } from './dto/copy.dto';
 
 /**
@@ -110,12 +107,10 @@ export class CopyService {
 
   /** 校验项目归属（用于列表场景） */
   private async assertProjectOwnership(userId: number, projectId: number): Promise<void> {
-    const project = await this.projectRepo.findOne({
-      where: { id: projectId },
-      select: ['id', 'userId'],
+    await findOwnedOrFail(this.projectRepo, projectId, userId, {
+      notFoundMsg: '项目不存在或已被删除',
+      forbiddenMsg: '无权访问该项目',
     });
-    if (!project) throw new NotFoundException('项目不存在或已被删除');
-    if (Number(project.userId) !== Number(userId)) throw new ForbiddenException('无权访问该项目');
   }
 
   /**

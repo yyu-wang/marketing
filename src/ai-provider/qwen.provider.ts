@@ -102,8 +102,8 @@ export class QwenProvider implements AIProvider {
             const events = buffer.split('\n\n');
             buffer = events.pop() ?? '';
 
-            for (const evt of events) {
-              const line = evt.trim();
+            for (const chunk of events) {
+              const line = chunk.trim();
               if (!line.startsWith('data:')) continue;
               const payload = line.slice(5).trim();
               if (payload === '[DONE]') {

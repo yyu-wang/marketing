@@ -1,12 +1,8 @@
-import {
-  ConflictException,
-  ForbiddenException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProjectEntity } from '../database/entities/project.entity';
+import { findOwnedOrFail } from '../common/utils/ownership';
 import { CreateProjectDto, UpdateProjectDto } from './dto/project.dto';
 
 /**
@@ -56,13 +52,10 @@ export class ProjectService {
 
   /** 详情（含归属校验） */
   async findOneOrFail(userId: number, projectId: number): Promise<ProjectEntity> {
-    const project = await this.projectRepo.findOne({ where: { id: projectId } });
-    if (!project) throw new NotFoundException('项目不存在或已被删除');
-    if (Number(project.userId) !== Number(userId)) {
-      // 越权直接 403，绝不返回数据
-      throw new ForbiddenException('无权访问该项目');
-    }
-    return project;
+    return findOwnedOrFail(this.projectRepo, projectId, userId, {
+      notFoundMsg: '项目不存在或已被删除',
+      forbiddenMsg: '无权访问该项目',
+    });
   }
 
   /**
@@ -80,11 +73,11 @@ export class ProjectService {
     const project = await this.findOneOrFail(userId, projectId);
 
     if (dto.name && dto.name !== project.name) {
-      const dup = await this.projectRepo.findOne({
+      const duplicate = await this.projectRepo.findOne({
         where: { userId, name: dto.name },
         select: ['id'],
       });
-      if (dup) throw new ConflictException('已存在同名项目，请更换名称');
+      if (duplicate) throw new ConflictException('已存在同名项目，请更换名称');
       project.name = dto.name;
     }
     if (dto.productDesc !== undefined) project.productDesc = dto.productDesc;

@@ -2,29 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { CopyChannel } from '../database/entities/copy.entity';
 import { CopyService } from '../copy/copy.service';
 
-/**
- * 看板聚合结果
- *
- * 对应 PRD 4.6 节数据看板模块：
- *   - 渠道占比（饼图）
- *   - 收藏排行（横向柱状图 TOP 5）
- *   - 生成趋势（近 7 天折线图）
- */
 export interface AnalyticsOverview {
   channelDistribution: Array<{ channel: CopyChannel; count: number; ratio: number }>;
   topStarred: Array<{ copyId: number; summary: string; channel: CopyChannel }>;
   dailyTrend: Array<{ date: string; count: number }>;
 }
 
-/**
- * 数据看板服务
- *
- * MVP 阶段使用真实数据；当数据为空时返回兜底（PRD 12 节备注："随机热度值"）。
- * 实现策略：复用 CopyService 中的聚合查询，避免重复 SQL。
- */
 @Injectable()
 export class AnalyticsService {
-  /** 文案摘要展示字数 */
   private readonly SUMMARY_LEN = 30;
 
   constructor(private readonly copyService: CopyService) {}

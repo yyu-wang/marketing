@@ -1,12 +1,13 @@
 import {
   ConflictException,
   Injectable,
+  Logger,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
-import * as bcrypt from 'bcryptjs';
+import { hash, compare } from 'bcryptjs';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../database/entities/user.entity';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
@@ -24,7 +25,7 @@ import { LoginDto, RegisterDto } from './dto/auth.dto';
  */
 @Injectable()
 export class AuthService {
-  /** bcrypt cost factor，遵循 PRD 7.2 安全要求 */
+  private readonly logger = new Logger(AuthService.name);
   private readonly BCRYPT_COST = 12;
 
   constructor(
@@ -52,7 +53,7 @@ export class AuthService {
       throw new ConflictException('该邮箱已被注册');
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, this.BCRYPT_COST);
+    const passwordHash = await hash(dto.password, this.BCRYPT_COST);
     const user = await this.userRepo.save(
       this.userRepo.create({ email: dto.email, passwordHash }),
     );
@@ -81,7 +82,7 @@ export class AuthService {
       throw new UnauthorizedException('邮箱或密码错误');
     }
 
-    const matched = await bcrypt.compare(dto.password, user.passwordHash);
+    const matched = await compare(dto.password, user.passwordHash);
     if (!matched) {
       throw new UnauthorizedException('邮箱或密码错误');
     }
@@ -103,7 +104,7 @@ export class AuthService {
       select: ['id', 'email', 'createdAt', 'updatedAt'],
     });
 
-    console.log('[findUserById] 查询结果:', user);
+    this.logger.debug(`[findUserById] userId=${userId} found=${!!user}`);
     return user;
   }
 

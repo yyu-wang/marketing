@@ -7,15 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ConversationEntity } from '../database/entities/conversation.entity';
 import { MessageEntity } from '../database/entities/message.entity';
+import { findOwnedOrFail } from '../common/utils/ownership';
 
-/**
- * 对话与消息聚合服务
- *
- * 核心职责：
- *   - 对话 CRUD + 按日期分组列表；
- *   - 落用户消息 + 创建占位 assistant 消息（供 SSE 异步填充）；
- *   - 归属校验（防越权）。
- */
 @Injectable()
 export class ConversationsService {
   constructor(
@@ -86,22 +79,35 @@ export class ConversationsService {
   async getDetail(
     userId: number,
     conversationId: number,
+    page = 1,
+    pageSize = 50,
   ): Promise<{
     id: number;
     title: string;
     createdAt: Date;
     messages: MessageEntity[];
+    total: number;
+    page: number;
+    pageSize: number;
   }> {
     const conv = await this.findOwned(userId, conversationId);
+    const total = await this.messageRepo.count({
+      where: { conversationId: conv.id },
+    });
     const messages = await this.messageRepo.find({
       where: { conversationId: conv.id },
-      order: { createdAt: 'ASC', id: 'ASC' },
+      order: { createdAt: 'DESC', id: 'DESC' },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     });
     return {
       id: Number(conv.id),
       title: conv.title,
       createdAt: conv.createdAt,
       messages,
+      total,
+      page,
+      pageSize,
     };
   }
 
@@ -170,12 +176,9 @@ export class ConversationsService {
     if (isFirst) {
       const titleSrc = text || '图片创作';
       conv.title = titleSrc.slice(0, 30);
-      await this.conversationRepo.save(conv);
-    } else {
-      // 触发 updatedAt 刷新，便于侧边栏置顶
-      conv.updatedAt = new Date();
-      await this.conversationRepo.save(conv);
     }
+    conv.updatedAt = new Date();
+    await this.conversationRepo.save(conv);
 
     return {
       userMessageId: Number(userMsg.id),
@@ -202,14 +205,11 @@ export class ConversationsService {
     }
     const conv = await this.findOwned(userId, Number(assistant.conversationId));
 
-    // 上一条 user 消息（同对话内 id 紧邻、createdAt 在 assistant 之前）
-    const user = await this.messageRepo
-      .createQueryBuilder('m')
-      .where('m.conversation_id = :cid', { cid: conv.id })
-      .andWhere('m.role = :role', { role: 'user' })
-      .andWhere('m.id < :aid', { aid: assistant.id })
-      .orderBy('m.id', 'DESC')
-      .getOne();
+    // 取该对话下最新一条 user 消息（顺序保存保证 user.id < assistant.id）
+    const user = await this.messageRepo.findOne({
+      where: { conversationId: conv.id, role: 'user' },
+      order: { id: 'DESC' },
+    });
 
     if (!user) throw new NotFoundException('未找到关联的 user 消息');
 
@@ -231,14 +231,10 @@ export class ConversationsService {
     userId: number,
     conversationId: number,
   ): Promise<ConversationEntity> {
-    const conv = await this.conversationRepo.findOne({
-      where: { id: conversationId },
+    return findOwnedOrFail(this.conversationRepo, conversationId, userId, {
+      notFoundMsg: '对话不存在',
+      hideExistence: true,
     });
-    if (!conv) throw new NotFoundException('对话不存在');
-    if (Number(conv.userId) !== Number(userId)) {
-      throw new NotFoundException('对话不存在');
-    }
-    return conv;
   }
 
   /** YYYY-MM-DD（UTC+8 自然日） */

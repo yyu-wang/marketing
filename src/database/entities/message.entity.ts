@@ -24,6 +24,7 @@ export type MessageStatus = 'pending' | 'streaming' | 'done' | 'error';
  *   pending → streaming → done|error
  */
 @Entity('messages')
+@Index('idx_msg_conv_role_id', ['conversationId', 'role', 'id'])
 export class MessageEntity {
   @PrimaryGeneratedColumn({ type: 'bigint', name: 'id' })
   id: number;

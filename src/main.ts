@@ -88,6 +88,6 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((err) => {
-  console.error('Bootstrap failed:', err);
+  Logger.error('Bootstrap failed:', err instanceof Error ? err.stack : err);
   process.exit(1);
 });

@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import * as bcrypt from 'bcryptjs';
+import { hash as hashPw, compare } from 'bcryptjs';
 import { UserEntity } from '../database/entities/user.entity';
 import { AuthService } from './auth.service';
 
@@ -79,7 +79,7 @@ describe('AuthService', () => {
       expect(savedEntity.passwordHash).toBeDefined();
       expect(savedEntity.passwordHash).not.toBe('abc12345');
       // 验证 bcrypt 哈希可被 compare 校验通过
-      const ok = await bcrypt.compare('abc12345', savedEntity.passwordHash);
+      const ok = await compare('abc12345', savedEntity.passwordHash);
       expect(ok).toBe(true);
     });
   });
@@ -96,7 +96,7 @@ describe('AuthService', () => {
     });
 
     it('密码错误应返回 401', async () => {
-      const hash = await bcrypt.hash('correct-pw', 4); // 加速测试
+      const hash = await hashPw('correct-pw', 4); // 加速测试
       userRepo.findOne.mockResolvedValueOnce({
         id: 1,
         email: 'a@b.com',
@@ -109,7 +109,7 @@ describe('AuthService', () => {
     });
 
     it('凭证正确应返回 JWT', async () => {
-      const hash = await bcrypt.hash('correct-pw', 4);
+      const hash = await hashPw('correct-pw', 4);
       userRepo.findOne.mockResolvedValueOnce({
         id: 1,
         email: 'a@b.com',
