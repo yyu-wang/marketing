@@ -51,7 +51,11 @@ export class AIService {
   /**
    * 流式生成（对话回复）
    */
-  generateChat(userId: number, assistantMessageId: number): Observable<SseEvent> {
+  generateChat(
+    userId: number,
+    assistantMessageId: number,
+    continueFrom?: string,
+  ): Observable<SseEvent> {
     const subject = new Subject<SseEvent>();
 
     void (async () => {
@@ -67,6 +71,7 @@ export class AIService {
           text: user.content ?? '',
           imageUrls: user.imageUrls ?? undefined,
           preferDataUrl: true,
+          continueFrom,
         });
 
         await this.conversations.updateAssistantMessage(assistantMessageId, {

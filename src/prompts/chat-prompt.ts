@@ -13,16 +13,16 @@ const SYSTEM_PROMPT = `你是一位资深中文营销文案撰写专家。
 
 export interface BuildChatPromptInput {
   text?: string;
-  /** 图片 URL 数组：COS 绝对 URL */
   imageUrls?: string[];
-  /** 是否优先把图片转 data URL */
   preferDataUrl?: boolean;
+  /** 已生成的部分内容，继续生成时作为 assistant 历史传入 */
+  continueFrom?: string;
 }
 
 export async function buildChatPrompt(
   input: BuildChatPromptInput,
 ): Promise<ChatMessage[]> {
-  const { text, imageUrls, preferDataUrl = true } = input;
+  const { text, imageUrls, preferDataUrl = true, continueFrom } = input;
 
   const userParts: any[] = [];
 
@@ -40,10 +40,16 @@ export async function buildChatPrompt(
     text: (text && text.trim()) || '请根据图片内容生成文案',
   });
 
-  return [
+  const messages: ChatMessage[] = [
     { role: 'system', content: SYSTEM_PROMPT },
     { role: 'user', content: userParts },
   ];
+
+  if (continueFrom) {
+    messages.push({ role: 'assistant', content: continueFrom });
+  }
+
+  return messages;
 }
 
 async function resolveImageUrl(
