@@ -15,11 +15,10 @@ import type {
   ConversationGroup,
   Message,
 } from '@/types/conversation'
-import { useQuotaStore } from '@/stores/quota'
 
 interface SendPayload {
   text?: string
-  imageUrl?: string
+  imageUrls?: string[]
 }
 
 interface ConversationState {
@@ -94,11 +93,12 @@ export const useConversationStore = defineStore('conversation', {
     },
 
     async send(payload: SendPayload) {
+      console.log('[send] 步骤1: 开始发送')
       if (this.streaming) {
         ElMessage.warning('当前对话正在生成中，请稍候')
         return
       }
-      if (!payload.text && !payload.imageUrl) {
+      if (!payload.text && (!payload.imageUrls || payload.imageUrls.length === 0)) {
         ElMessage.warning('请输入文本或上传图片')
         return
       }
@@ -120,6 +120,7 @@ export const useConversationStore = defineStore('conversation', {
       let result
       try {
         result = await postMessage(conversationId, payload)
+        console.log('[send] 步骤2: postMessage 成功, assistantMsgId=', result.assistantMessageId)
       } catch (err) {
         const message = err instanceof Error ? err.message : '消息发送失败'
         ElMessage.error(message)
@@ -132,9 +133,7 @@ export const useConversationStore = defineStore('conversation', {
         conversationId,
         role: 'user',
         content: payload.text ?? null,
-        imageUrl: payload.imageUrl ?? null,
-        xiaohongshu: null,
-        moments: null,
+        imageUrls: payload.imageUrls ?? null,
         status: 'done',
         createdAt: now,
         updatedAt: now,
@@ -144,9 +143,7 @@ export const useConversationStore = defineStore('conversation', {
         conversationId,
         role: 'assistant',
         content: null,
-        imageUrl: null,
-        xiaohongshu: null,
-        moments: null,
+        imageUrls: null,
         status: 'streaming',
         createdAt: now,
         updatedAt: now,
@@ -157,33 +154,33 @@ export const useConversationStore = defineStore('conversation', {
       this.streaming = true
       this.streamingMessageId = assistantMsg.id
       this.streamingDelta = ''
+      console.log('[send] 步骤3: 启动 SSE, msgId=', assistantMsg.id)
 
       this.streamHandle = chatStream(assistantMsg.id, {
         onChunk: (e) => {
+          console.log('[send] onChunk: delta=', JSON.stringify(e.delta))
           this.streamingDelta += e.delta
         },
-        onResult: (e) => {
-          const target = this.findMessage(e.messageId)
+        onDone: () => {
+          console.log('[send] onDone')
+          const target = this.findMessage(assistantMsg.id)
           if (target) {
-            target.xiaohongshu = e.xiaohongshu
-            target.moments = e.moments
+            target.content = this.streamingDelta
             target.status = 'done'
           }
-        },
-        onDone: (e) => {
-          const quota = useQuotaStore()
-          quota.applyServerSnapshot({ remaining: e.remaining, max: e.max })
           this.finalizeStream()
           // 异步刷新侧边栏（新建对话首次出现）
           void this.fetchList()
         },
         onError: (message) => {
+          console.log('[send] onError:', message)
           const target = this.findMessage(assistantMsg.id)
           if (target) target.status = 'error'
           ElMessage.error(message)
           this.finalizeStream()
         },
         onClose: () => {
+          console.log('[send] onClose')
           if (this.streaming) this.finalizeStream()
         },
       })
@@ -199,6 +196,10 @@ export const useConversationStore = defineStore('conversation', {
     },
 
     finalizeStream() {
+      const target = this.streamingMessageId
+        ? this.findMessage(this.streamingMessageId)
+        : null
+      if (target && target.status === 'streaming') target.status = 'error'
       this.streaming = false
       this.streamingMessageId = null
       this.streamingDelta = ''

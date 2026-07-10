@@ -1,5 +1,5 @@
-const TOKEN_KEY = 'copywise_token'
-const USER_KEY = 'copywise_user'
+const TOKEN_KEY = 'marketing_wise_token'
+const USER_KEY = 'marketing_wise_user'
 
 export interface StoredUser {
   userId: number

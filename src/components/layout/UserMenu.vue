@@ -19,10 +19,8 @@ import { ArrowDown } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { useQuotaStore } from '@/stores/quota'
 
 const auth = useAuthStore()
-const quota = useQuotaStore()
 const router = useRouter()
 
 const initial = computed(() => (auth.user?.email?.[0] ?? 'U').toUpperCase())
@@ -32,7 +30,6 @@ const onCommand = async (command: string) => {
   try {
     await ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning' })
     await auth.logout()
-    quota.reset()
     await router.replace('/login')
   } catch {
     /* 取消 */

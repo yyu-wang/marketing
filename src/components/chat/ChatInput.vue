@@ -1,20 +1,26 @@
 <template>
   <div class="chat-input">
-    <div v-if="imageUrl" class="chat-input__image-chip">
-      <img :src="resolvedImageUrl" alt="待发送图片" />
-      <el-icon class="chat-input__image-remove" @click="clearImage">
-        <Close />
-      </el-icon>
+    <div v-if="imageUrls.length > 0" class="chat-input__image-grid">
+      <div
+        v-for="(url, idx) in imageUrls"
+        :key="url"
+        class="chat-input__image-chip"
+      >
+        <img :src="url" alt="待发送图片" />
+        <el-icon class="chat-input__image-remove" @click="removeImage(idx)">
+          <Close />
+        </el-icon>
+      </div>
     </div>
 
     <div class="chat-input__row">
-      <el-tooltip content="上传图片" placement="top">
+      <el-tooltip :content="uploadTip" placement="top">
         <el-button
           class="chat-input__upload-btn"
           :icon="Plus"
           circle
           :loading="uploading"
-          :disabled="disabled"
+          :disabled="disabled || imageUrls.length >= 9"
           @click="triggerPick"
         />
       </el-tooltip>
@@ -47,12 +53,13 @@
       ref="fileInputRef"
       type="file"
       accept="image/jpeg,image/png,image/webp"
+      multiple
       class="chat-input__file"
       @change="onFileChange"
     />
 
     <div class="chat-input__hint">
-      Enter 发送，Shift + Enter 换行 · 支持 jpg / png / webp，最大 5 MB
+      Enter 发送，Shift + Enter 换行 · 最多 9 张图片 · jpg / png / webp
     </div>
   </div>
 </template>
@@ -63,17 +70,19 @@ import { ElMessage } from 'element-plus'
 import { Close, Plus, Promotion } from '@element-plus/icons-vue'
 import { uploadImage } from '@/api/upload'
 
+const MAX_IMAGES = 9
+
 const props = defineProps<{
   disabled?: boolean
   placeholder?: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'submit', payload: { text?: string; imageUrl?: string }): void
+  (e: 'submit', payload: { text?: string; imageUrls?: string[] }): void
 }>()
 
 const text = ref('')
-const imageUrl = ref<string | null>(null)
+const imageUrls = ref<string[]>([])
 const uploading = ref(false)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -82,56 +91,65 @@ const placeholder = computed(
   () => props.placeholder || '直接输入文本 / 图片 + 文本，即可开始创作...',
 )
 
+const uploadTip = computed(() => {
+  const remain = MAX_IMAGES - imageUrls.value.length
+  if (remain <= 0) return '已达上限 9 张'
+  return `上传图片（还可选 ${remain} 张）`
+})
+
 const canSend = computed(
   () =>
     !props.disabled &&
     !uploading.value &&
-    (text.value.trim().length > 0 || !!imageUrl.value),
+    (text.value.trim().length > 0 || imageUrls.value.length > 0),
 )
 
-/**
- * 图片 URL 处理：后端返回相对路径 /uploads/xxx，
- * 前端 dev 走 vite 代理（/uploads 也代理到 server）；
- * 直接预览相对路径即可。
- */
-const resolvedImageUrl = computed(() => imageUrl.value || '')
-
 function triggerPick() {
-  if (props.disabled || uploading.value) return
+  if (props.disabled || uploading.value || imageUrls.value.length >= MAX_IMAGES) return
   fileInputRef.value?.click()
 }
 
 async function onFileChange(e: Event) {
   const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
+  const files = Array.from(input.files ?? [])
   input.value = '' // 允许重复选同一文件
-  if (!file) return
 
-  if (file.size > 5 * 1024 * 1024) {
-    ElMessage.error('图片大小不能超过 5MB')
-    return
+  if (files.length === 0) return
+
+  const remain = MAX_IMAGES - imageUrls.value.length
+  if (files.length > remain) {
+    ElMessage.warning(`最多还能添加 ${remain} 张图片，已自动截取前 ${remain} 张`)
   }
+  const toUpload = files.slice(0, remain)
+
   uploading.value = true
-  try {
-    const res = await uploadImage(file)
-    imageUrl.value = res.url
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : '图片上传失败'
-    ElMessage.error(msg)
-  } finally {
-    uploading.value = false
+  const uploaded: string[] = []
+
+  for (const file of toUpload) {
+    try {
+      const res = await uploadImage(file)
+      uploaded.push(res.url)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : '图片上传失败'
+      ElMessage.error(msg)
+      // 中断剩余上传
+      break
+    }
   }
+
+  imageUrls.value = [...imageUrls.value, ...uploaded]
+  uploading.value = false
 }
 
-function clearImage() {
-  imageUrl.value = null
+function removeImage(idx: number) {
+  imageUrls.value = imageUrls.value.filter((_, i) => i !== idx)
 }
 
 function autoGrow() {
   const el = textareaRef.value
   if (!el) return
   el.style.height = 'auto'
-  const max = 6 * 24 // 6 行
+  const max = 6 * 24
   el.style.height = `${Math.min(el.scrollHeight, max)}px`
 }
 
@@ -146,10 +164,10 @@ function submit() {
   if (!canSend.value) return
   emit('submit', {
     text: text.value.trim() || undefined,
-    imageUrl: imageUrl.value || undefined,
+    imageUrls: imageUrls.value.length > 0 ? imageUrls.value : undefined,
   })
   text.value = ''
-  imageUrl.value = null
+  imageUrls.value = []
   void nextTick(autoGrow)
 }
 </script>
@@ -168,10 +186,16 @@ function submit() {
   backdrop-filter: blur(20px);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
 
+  &__image-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
   &__image-chip {
     position: relative;
     display: inline-block;
-    margin-bottom: 10px;
 
     img {
       width: 64px;

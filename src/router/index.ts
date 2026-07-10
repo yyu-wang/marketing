@@ -54,7 +54,7 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const auth = useAuthStore()
-  const baseTitle = import.meta.env.VITE_APP_TITLE || 'CopyWise'
+  const baseTitle = import.meta.env.VITE_APP_TITLE || 'Marketing Wise'
   document.title = to.meta?.title ? `${to.meta.title} - ${baseTitle}` : baseTitle
 
   if (to.meta?.requiresAuth && !auth.isLoggedIn) {

@@ -13,61 +13,88 @@
     </div>
 
     <div class="message-bubble__content">
-      <!-- 用户消息：图片 + 文本 -->
       <template v-if="message.role === 'user'">
-        <div v-if="message.imageUrl" class="message-bubble__image">
-          <img :src="message.imageUrl" alt="用户上传图片" />
-        </div>
-        <div v-if="message.content" class="message-bubble__text">
-          {{ message.content }}
+        <div class="message-bubble__card message-bubble__card--user">
+          <div
+            v-if="message.imageUrls && message.imageUrls.length > 0"
+            class="message-bubble__image-grid"
+          >
+            <div
+              v-for="(url, idx) in message.imageUrls"
+              :key="idx"
+              class="message-bubble__image"
+            >
+              <el-image
+                :src="url"
+                :preview-src-list="message.imageUrls"
+                fit="scale-down"
+                preview-teleported
+              />
+            </div>
+          </div>
+
+          <div
+            v-if="message.imageUrls && message.imageUrls.length > 0 && message.content"
+            class="message-bubble__separator"
+          />
+
+          <div v-if="message.content" class="message-bubble__text">
+            {{ message.content }}
+          </div>
         </div>
       </template>
 
-      <!-- 助手消息 -->
       <template v-else>
-        <!-- 流式中（streaming）：显示打字机原始增量 -->
         <div
-          v-if="message.status === 'streaming'"
-          class="message-bubble__text message-bubble__streaming"
+          class="message-bubble__card message-bubble__card--assistant"
+          :class="{ 'message-bubble__card--text-only': message.status === 'done' }"
         >
-          <template v-if="streamingDelta">
-            {{ streamingDelta }}<span class="message-bubble__caret" />
-          </template>
-          <template v-else>
+          <!-- 流式中（streaming）：显示打字机原始增量 -->
+          <div
+            v-if="message.status === 'streaming'"
+            class="message-bubble__text message-bubble__streaming"
+          >
+            <template v-if="streamingDelta">
+              {{ streamingDelta }}<span class="message-bubble__caret" />
+            </template>
+            <template v-else>
+              <el-icon class="is-loading"><Loading /></el-icon>
+              <span>正在思考...</span>
+            </template>
+          </div>
+
+          <!-- 已完成：显示回复文本 -->
+          <div v-else-if="message.status === 'done'" class="message-bubble__text message-bubble__text--with-action">
+            <div class="message-bubble__text-body">{{ message.content }}</div>
+            <div class="message-bubble__action">
+              <CopyButton :text="message.content || ''" />
+            </div>
+          </div>
+
+          <!-- pending（理论上很短暂） -->
+          <div v-else-if="message.status === 'pending'" class="message-bubble__text">
             <el-icon class="is-loading"><Loading /></el-icon>
-            <span>正在思考...</span>
-          </template>
-        </div>
+            <span>排队中...</span>
+          </div>
 
-        <!-- 已完成 + 结构化两版文案 -->
-        <DualCopyCard
-          v-else-if="message.status === 'done'"
-          :xiaohongshu="message.xiaohongshu ?? ''"
-          :moments="message.moments ?? ''"
-        />
-
-        <!-- pending（理论上很短暂） -->
-        <div v-else-if="message.status === 'pending'" class="message-bubble__text">
-          <el-icon class="is-loading"><Loading /></el-icon>
-          <span>排队中...</span>
-        </div>
-
-        <!-- 错误 -->
-        <div v-else class="message-bubble__error">
-          <el-icon><WarningFilled /></el-icon>
-          生成失败
-          <el-button v-if="onRetry" size="small" link @click="onRetry">
-            重试
-          </el-button>
+          <!-- 错误 -->
+          <div v-else class="message-bubble__error">
+            <el-icon><WarningFilled /></el-icon>
+            生成失败
+            <el-button v-if="onRetry" size="small" link @click="onRetry">
+              重试
+            </el-button>
+          </div>
         </div>
       </template>
     </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
 import { Loading, User, WarningFilled } from '@element-plus/icons-vue'
-import DualCopyCard from './DualCopyCard.vue'
+import CopyButton from '@/components/common/CopyButton.vue'
 import type { Message } from '@/types/conversation'
 
 defineProps<{
@@ -76,6 +103,7 @@ defineProps<{
   streamingDelta?: string
   onRetry?: () => void
 }>()
+
 </script>
 
 <style scoped lang="scss">
@@ -126,31 +154,106 @@ defineProps<{
     flex: 1;
   }
 
+  &__card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 18px;
+    background: $bg-card;
+    border: 1px solid $border-color;
+  }
+
+  &__card--user {
+    background: rgba(124, 92, 255, 0.08);
+    border-color: rgba(124, 92, 255, 0.24);
+  }
+
+  &__card--assistant {
+    background: $bg-card;
+  }
+
+  &__image-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
   &__image {
+    position: relative;
+    overflow: hidden;
+    border-radius: 16px;
+    cursor: zoom-in;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-width: 200px;
+    max-height: 200px;
+    width: min(100%, 200px);
+    aspect-ratio: 1 / 1;
+    background: rgba(255, 255, 255, 0.04);
+
     img {
-      max-width: 240px;
-      max-height: 240px;
-      border-radius: 12px;
-      border: 1px solid $border-color;
-      object-fit: cover;
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      object-position: center;
+    }
+  }
+
+  &__separator {
+    width: 100%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+    margin: 10px 0;
+  }
+
+  .message-preview-dialog {
+    text-align: center;
+
+    img {
+      max-width: 100%;
+      max-height: 80vh;
+      border-radius: 14px;
     }
   }
 
   &__text {
-    padding: 10px 14px;
-    border-radius: 14px;
-    background: $bg-card;
-    border: 1px solid $border-color;
+    padding: 0;
+    border: none;
+    background: transparent;
     color: $text-primary;
     font-size: 14px;
     line-height: 1.7;
     white-space: pre-wrap;
     word-break: break-word;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  &__text--with-action {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: start;
+    gap: 10px;
+  }
+
+  &__text-body {
+    min-width: 0;
+  }
+
+  &__action {
+    display: flex;
+    align-items: flex-start;
   }
 
   &--user &__text {
-    background: linear-gradient(135deg, rgba(124, 92, 255, 0.35), rgba(106, 139, 255, 0.25));
-    border-color: rgba(124, 92, 255, 0.4);
+    background: transparent;
+    border: none;
   }
 
   &__streaming {
@@ -175,7 +278,7 @@ defineProps<{
     padding: 10px 14px;
     border-radius: 14px;
     background: rgba(248, 113, 113, 0.12);
-    border: 1px solid rgba(248, 113, 113, 0.3);
+    border: none;
     color: $color-danger;
     font-size: 13px;
   }

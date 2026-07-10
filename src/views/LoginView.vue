@@ -2,7 +2,7 @@
   <div class="auth-page">
     <div class="auth-card">
       <div class="auth-card__header">
-        <h1>登录 CopyWise</h1>
+        <h1>登录 Marketing Wise</h1>
         <p>智能营销文案助手 · 让创意触手可得</p>
       </div>
       <el-form
@@ -48,10 +48,8 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
-import { useQuotaStore } from '@/stores/quota'
 
 const auth = useAuthStore()
-const quota = useQuotaStore()
 const router = useRouter()
 const route = useRoute()
 
@@ -82,7 +80,6 @@ const onSubmit = async (instance: FormInstance | null) => {
     try {
       await auth.login({ email: form.email.trim(), password: form.password })
       ElMessage.success('登录成功')
-      await quota.refresh().catch(() => undefined)
       const redirect = (route.query.redirect as string) || '/projects'
       await router.replace(redirect)
     } catch {

@@ -1,12 +1,12 @@
 # ============================================================================
-# CopyWise Web 多阶段构建
-# 构建：docker build -t copywise-web .
+# Marketing Wise Web 多阶段构建
+# 构建：docker build -t marketing-wise-web .
 # ============================================================================
 FROM node:20-alpine AS builder
 WORKDIR /app
 
 ARG VITE_API_BASE=/api
-ARG VITE_APP_TITLE="CopyWise 智能营销文案助手"
+ARG VITE_APP_TITLE="Marketing Wise 智能营销文案助手"
 ENV VITE_API_BASE=$VITE_API_BASE \
     VITE_APP_TITLE=$VITE_APP_TITLE
 

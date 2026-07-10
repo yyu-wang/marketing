@@ -1,63 +1,64 @@
 <template>
   <aside class="chat-sidebar">
-    <div class="chat-sidebar__brand">
-      <span class="chat-sidebar__logo">CW</span>
-      <span class="chat-sidebar__name">CopyWise</span>
-    </div>
+    <div class="chat-sidebar__top">
+      <div class="chat-sidebar__brand">
+        <span class="chat-sidebar__logo">MW</span>
+        <span class="chat-sidebar__name">Marketing Wise</span>
+      </div>
 
-    <el-button
-      class="chat-sidebar__new"
-      type="primary"
-      round
-      :icon="Plus"
-      @click="onNew"
-    >
-      新建对话
-    </el-button>
+      <el-button
+        class="chat-sidebar__new"
+        type="primary"
+        round
+        :icon="Plus"
+        @click="onNew"
+      >
+        新建对话
+      </el-button>
 
-    <div class="chat-sidebar__list" v-loading="store.listLoading">
-      <template v-if="store.list.length">
-        <div
-          v-for="group in store.list"
-          :key="group.date"
-          class="chat-sidebar__group"
-        >
-          <div class="chat-sidebar__group-title">{{ group.date }}</div>
+      <div v-loading="store.listLoading" class="chat-sidebar__list">
+        <template v-if="store.list.length">
           <div
-            v-for="item in group.items"
-            :key="item.id"
-            class="chat-sidebar__item"
-            :class="{ 'is-active': item.id === store.currentId }"
-            @click="onOpen(item.id)"
+            v-for="group in store.list"
+            :key="group.date"
+            class="chat-sidebar__group"
           >
-            <span class="chat-sidebar__item-title" :title="item.title">
-              {{ item.title }}
-            </span>
-            <el-dropdown
-              trigger="click"
-              @command="(cmd: string) => onAction(cmd, item)"
-              @click.stop
+            <div class="chat-sidebar__group-title">{{ group.date }}</div>
+            <div
+              v-for="item in group.items"
+              :key="item.id"
+              class="chat-sidebar__item"
+              :class="{ 'is-active': item.id === store.currentId }"
+              @click="onOpen(item.id)"
             >
-              <el-icon class="chat-sidebar__item-more"><MoreFilled /></el-icon>
-              <template #dropdown>
-                <el-dropdown-menu>
-                  <el-dropdown-item command="rename">重命名</el-dropdown-item>
-                  <el-dropdown-item command="delete" divided>
-                    <span class="text-danger">删除</span>
-                  </el-dropdown-item>
-                </el-dropdown-menu>
-              </template>
-            </el-dropdown>
+              <span class="chat-sidebar__item-title" :title="item.title">
+                {{ item.title }}
+              </span>
+              <el-dropdown
+                trigger="click"
+                @command="(cmd: string) => onAction(cmd, item)"
+                @click.stop
+              >
+                <el-icon class="chat-sidebar__item-more"><MoreFilled /></el-icon>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="rename">重命名</el-dropdown-item>
+                    <el-dropdown-item command="delete" divided>
+                      <span class="text-danger">删除</span>
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+            </div>
           </div>
+        </template>
+        <div v-else-if="!store.listLoading" class="chat-sidebar__empty">
+          暂无历史对话
         </div>
-      </template>
-      <div v-else-if="!store.listLoading" class="chat-sidebar__empty">
-        暂无历史对话
       </div>
     </div>
 
     <div class="chat-sidebar__footer">
-      <QuotaBadge />
       <UserMenu />
     </div>
   </aside>
@@ -67,9 +68,8 @@
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MoreFilled, Plus } from '@element-plus/icons-vue'
-import { useConversationStore } from '@/stores/conversation'
-import QuotaBadge from '@/components/layout/QuotaBadge.vue'
 import UserMenu from '@/components/layout/UserMenu.vue'
+import { useConversationStore } from '@/stores/conversation'
 import type { ConversationSummary } from '@/types/conversation'
 
 const store = useConversationStore()
@@ -122,11 +122,12 @@ async function onAction(cmd: string, item: ConversationSummary) {
 
 .chat-sidebar {
   width: 260px;
-  height: 100%;
+  min-height: 100vh;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   padding: 18px 14px;
-  background: rgba(10, 10, 20, 0.55);
+  background: rgba(10, 10, 20, 0.92);
   backdrop-filter: blur(18px);
   border-right: 1px solid $border-color;
 
@@ -161,8 +162,17 @@ async function onAction(cmd: string, item: ConversationSummary) {
     width: 100%;
   }
 
+  &__top {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
   &__list {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     padding-right: 4px;
   }
@@ -226,12 +236,10 @@ async function onAction(cmd: string, item: ConversationSummary) {
   }
 
   &__footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding-top: 14px;
+    padding: 12px 8px 4px;
     border-top: 1px solid $border-color;
+    flex-shrink: 0;
+    background: rgba(10, 10, 20, 0.92);
   }
 }
 </style>

@@ -1,6 +1,6 @@
-# CopyWise Web
+# Marketing Wise Web
 
-CopyWise 智能营销文案助手前端 —— Vue 3 + Vite + TypeScript + Element Plus。
+Marketing Wise 智能营销文案助手前端 —— Vue 3 + Vite + TypeScript + Element Plus。
 
 ## 技术栈
 
@@ -68,6 +68,6 @@ curl http://localhost/
 | 变量 | 默认 | 作用 |
 |---|---|---|
 | `VITE_API_BASE` | `/api` | 后端基地址；开发由 Vite proxy 转发，生产由 Nginx 反代 |
-| `VITE_APP_TITLE` | `CopyWise 智能营销文案助手` | HTML 标题与品牌名 |
+| `VITE_APP_TITLE` | `Marketing Wise 智能营销文案助手` | HTML 标题与品牌名 |
 
 Docker 构建支持通过 `--build-arg VITE_API_BASE=...` 在构建期覆写。

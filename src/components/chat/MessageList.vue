@@ -5,7 +5,7 @@
         <span class="message-list__hero-icon">✨</span>
         <h1 class="message-list__hero-title">今天想创作什么呢？</h1>
         <p class="message-list__hero-sub">
-          输入文字或上传图片，AI 同时为你生成「小红书」与「朋友圈」两版文案。
+          输入文字或上传图片，AI 营销文案助手为你提供专业建议。
         </p>
       </div>
     </div>
@@ -55,6 +55,7 @@ watch(
 
 .message-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 24px 24px 12px;
   display: flex;

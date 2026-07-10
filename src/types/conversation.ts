@@ -8,9 +8,7 @@ export interface Message {
   conversationId: number
   role: MessageRole
   content: string | null
-  imageUrl: string | null
-  xiaohongshu: string | null
-  moments: string | null
+  imageUrls: string[] | null
   status: MessageStatus
   createdAt: string
   updatedAt: string
@@ -19,7 +17,7 @@ export interface Message {
 export interface ConversationSummary {
   id: number
   title: string
-  updatedAt: string
+  createdAt: string
 }
 
 export interface ConversationGroup {
@@ -36,7 +34,7 @@ export interface ConversationDetail {
 
 export interface PostMessagePayload {
   text?: string
-  imageUrl?: string
+  imageUrls?: string[]
 }
 
 export interface PostMessageResult {

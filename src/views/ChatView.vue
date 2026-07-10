@@ -40,16 +40,19 @@ onMounted(() => {
   }
 })
 
-// 路由参数切换时重新加载对应详情
+// 路由参数切换时重新加载对应详情（由 send 内部创建的跳过，避免重复请求）
 watch(
   () => props.conversationId,
   (id) => {
-    if (id) void store.open(id)
-    else store.newConversation()
+    if (id) {
+      if (store.current?.id !== id) void store.open(id)
+    } else {
+      store.newConversation()
+    }
   },
 )
 
-async function onSubmit(payload: { text?: string; imageUrl?: string }) {
+async function onSubmit(payload: { text?: string; imageUrls?: string[] }) {
   const hadCurrent = !!store.current
   await store.send(payload)
   // 第一次发送时 send 内部刚创建了对话，跳转到 /c/:id 让 URL 与状态同步
@@ -65,8 +68,8 @@ async function onSubmit(payload: { text?: string; imageUrl?: string }) {
 .chat-view {
   display: flex;
   flex: 1;
-  min-height: 100vh;
-  height: 100vh;
+  min-height: 0;
+  height: 100%;
 
   &__main {
     flex: 1;
@@ -77,10 +80,11 @@ async function onSubmit(payload: { text?: string; imageUrl?: string }) {
   }
 
   &__header {
-    height: 56px;
+    height: 64px;
     padding: 0 28px;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     border-bottom: 1px solid $border-color;
     background: rgba(7, 7, 13, 0.4);
     backdrop-filter: blur(12px);
