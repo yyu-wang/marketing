@@ -39,6 +39,14 @@ export class UserEntity {
   @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
   updatedAt: Date;
 
+  /** 用户角色：admin / user，默认 user */
+  @Column({ type: 'varchar', length: 20, name: 'role', default: 'user' })
+  role: string;
+
+  /** 账户启用状态：1=启用 0=停用，默认启用 */
+  @Column({ type: 'tinyint', width: 1, name: 'is_active', default: 1 })
+  isActive: number;
+
   // -------------------------------------------------------------------
   // 关系：一个用户可创建多个项目、多条额度记录
   // -------------------------------------------------------------------

@@ -73,3 +73,7 @@ export function buildPrompt(channel: CopyChannel, ctx: PromptContext): string {
     .filter(Boolean)
     .join('\n');
 }
+
+export function getDefaultPrompt(channel: CopyChannel): ChannelPromptConfig | undefined {
+  return CHANNEL_PROMPTS[channel];
+}

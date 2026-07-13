@@ -5,6 +5,7 @@ import { ProjectEntity } from './entities/project.entity';
 import { CopyEntity } from './entities/copy.entity';
 import { ConversationEntity } from './entities/conversation.entity';
 import { MessageEntity } from './entities/message.entity';
+import { PromptTemplateEntity } from './entities/prompt-template.entity';
 
 /**
  * TypeORM 配置工厂
@@ -32,6 +33,7 @@ export const createTypeOrmConfig = (
     CopyEntity,
     ConversationEntity,
     MessageEntity,
+    PromptTemplateEntity,
   ],
   synchronize: config.get<string>('DB_SYNC') === 'true',
   logging: config.get<string>('DB_LOGGING') === 'true',

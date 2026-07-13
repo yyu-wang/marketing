@@ -69,6 +69,16 @@ services:
     ports:
       - '80:80'
 
+  admin:
+    image: ghcr.io/yyu-wang/copywise-admin:dev
+    container_name: marketing-wise-admin
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '8080:80'
+
 volumes:
   marketing-wise-mysql-data:
   marketing-wise-redis-data:

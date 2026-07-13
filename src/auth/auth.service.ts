@@ -43,7 +43,7 @@ export class AuthService {
    *   2. 密码 bcrypt 加密存储；
    *   3. 生成 JWT 并返回（自动登录体验）。
    */
-  async register(dto: RegisterDto): Promise<{ token: string; userId: number; email: string }> {
+  async register(dto: RegisterDto): Promise<{ token: string; userId: number; email: string; role: string }> {
     const exists = await this.userRepo.findOne({
       where: { email: dto.email },
       select: ['id'],
@@ -59,7 +59,7 @@ export class AuthService {
     );
 
     const token = await this.signToken(user.id, user.email);
-    return { token, userId: user.id, email: user.email };
+    return { token, userId: user.id, email: user.email, role: user.role };
   }
 
   /**
@@ -72,7 +72,7 @@ export class AuthService {
    *
    * 异常处理：账户不存在 / 密码错误均返回 401，避免存在性泄漏。
    */
-  async login(dto: LoginDto): Promise<{ token: string; userId: number; email: string }> {
+  async login(dto: LoginDto): Promise<{ token: string; userId: number; email: string; role: string }> {
     const user = await this.userRepo.findOne({
       where: { email: dto.email },
     });
@@ -82,13 +82,17 @@ export class AuthService {
       throw new UnauthorizedException('邮箱或密码错误');
     }
 
+    if (user.isActive === 0) {
+      throw new UnauthorizedException('该账户已被停用，请联系管理员');
+    }
+
     const matched = await compare(dto.password, user.passwordHash);
     if (!matched) {
       throw new UnauthorizedException('邮箱或密码错误');
     }
 
     const token = await this.signToken(user.id, user.email);
-    return { token, userId: user.id, email: user.email };
+    return { token, userId: user.id, email: user.email, role: user.role };
   }
 
   /**

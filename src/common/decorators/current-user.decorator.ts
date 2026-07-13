@@ -12,8 +12,9 @@ import { ExecutionContext, createParamDecorator } from '@nestjs/common';
  *   JwtStrategy.validate 的返回值会被 Passport 挂到 request.user。
  */
 export interface JwtPayload {
-  sub: number; // 用户 ID
+  sub: number;
   email: string;
+  role: string;
   iat?: number;
   exp?: number;
 }

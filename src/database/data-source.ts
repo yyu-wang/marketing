@@ -5,6 +5,7 @@ import { ProjectEntity } from './entities/project.entity';
 import { UserEntity } from './entities/user.entity';
 import { ConversationEntity } from './entities/conversation.entity';
 import { MessageEntity } from './entities/message.entity';
+import { PromptTemplateEntity } from './entities/prompt-template.entity';
 
 dotenv.config({ path: process.env.ENV_FILE || '.env' });
 
@@ -21,6 +22,7 @@ export default new DataSource({
     CopyEntity,
     ConversationEntity,
     MessageEntity,
+    PromptTemplateEntity,
   ],
   migrations: ['src/database/migrations/*.ts'],
   charset: 'utf8mb4',

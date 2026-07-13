@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AdminModule } from './admin/admin.module';
 import { AIModule } from './ai/ai.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
@@ -40,6 +41,7 @@ import { CosModule } from './cos/cos.module';
         },
       ],
     }),
+    AdminModule,
     AuthModule,
     CosModule,
     UploadModule,
