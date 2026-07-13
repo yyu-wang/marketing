@@ -58,7 +58,7 @@ export class AuthService {
       this.userRepo.create({ email: dto.email, passwordHash }),
     );
 
-    const token = await this.signToken(user.id, user.email);
+    const token = await this.signToken(user.id, user.email, user.role);
     return { token, userId: user.id, email: user.email, role: user.role };
   }
 
@@ -91,7 +91,7 @@ export class AuthService {
       throw new UnauthorizedException('邮箱或密码错误');
     }
 
-    const token = await this.signToken(user.id, user.email);
+    const token = await this.signToken(user.id, user.email, user.role);
     return { token, userId: user.id, email: user.email, role: user.role };
   }
 
@@ -118,9 +118,9 @@ export class AuthService {
    * 签名密钥与有效期从环境变量读取（JWT_SECRET / JWT_EXPIRES_IN）。
    * 默认 7 天，对应 PRD 4.2.2。
    */
-  private async signToken(userId: number, email: string): Promise<string> {
+  private async signToken(userId: number, email: string, role: string): Promise<string> {
     return this.jwtService.signAsync(
-      { sub: userId, email },
+      { sub: userId, email, role },
       {
         secret: this.configService.get<string>('JWT_SECRET'),
         expiresIn: this.configService.get<string>('JWT_EXPIRES_IN', '7d'),

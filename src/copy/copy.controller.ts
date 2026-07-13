@@ -8,6 +8,7 @@ import {
   Param,
   ParseIntPipe,
   Patch,
+  Post,
   Put,
   Query,
 } from '@nestjs/common';
@@ -19,29 +20,18 @@ import {
 import { CopyService } from './copy.service';
 import {
   BatchDeleteDto,
+  CreateFromMessageDto,
   ListCopiesQueryDto,
   ToggleStarDto,
   UpdateCopyDto,
 } from './dto/copy.dto';
 
-/**
- * 文案控制器
- *
- * 路由前缀：合并使用两个前缀：
- *   - /api/projects/:id/copies   列表（按项目）
- *   - /api/copies/:id            单条编辑/删除/收藏
- *   - /api/copies/batch-delete   批量删除
- * 对应 PRD 9.1。
- */
 @ApiTags('Copy')
 @ApiBearerAuth('JWT')
 @Controller()
 export class CopyController {
   constructor(private readonly copyService: CopyService) {}
 
-  /**
-   * GET /api/projects/:projectId/copies
-   */
   @Get('projects/:projectId/copies')
   @ApiOperation({
     summary: '项目下文案列表（支持渠道筛选 + 排序）',
@@ -61,7 +51,15 @@ export class CopyController {
     );
   }
 
-  /** PUT /api/copies/:id  编辑 */
+  @Post('copies/from-message')
+  @ApiOperation({ summary: '从对话消息保存文案到项目' })
+  createFromMessage(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateFromMessageDto,
+  ) {
+    return this.copyService.createFromMessage(user.sub, dto.messageId, dto.projectId, dto.channel);
+  }
+
   @Put('copies/:id')
   @ApiOperation({ summary: '编辑文案（标记 is_edited）' })
   @ApiParam({ name: 'id', description: '文案 ID', example: 100 })
@@ -73,7 +71,6 @@ export class CopyController {
     return this.copyService.update(user.sub, id, dto);
   }
 
-  /** PATCH /api/copies/:id/star  切换收藏 */
   @Patch('copies/:id/star')
   @ApiOperation({
     summary: '切换/设置收藏状态',
@@ -88,7 +85,6 @@ export class CopyController {
     return this.copyService.toggleStar(user.sub, id, dto.isStarred);
   }
 
-  /** DELETE /api/copies/:id  单条删除 */
   @Delete('copies/:id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '删除单条文案' })
@@ -101,9 +97,6 @@ export class CopyController {
     return { deleted: true };
   }
 
-  /**
-   * DELETE /api/copies  批量删除（body 携带 ids 数组）
-   */
   @Delete('copies')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({

@@ -1,4 +1,6 @@
 import {
+  HttpException,
+  HttpStatus,
   Inject,
   Injectable,
   Logger,
@@ -8,7 +10,8 @@ import { ConfigService } from '@nestjs/config';
 import { Observable, Subject } from 'rxjs';
 import { AI_PROVIDER, AIProvider } from '../ai-provider/ai-provider.interface';
 import { ConversationsService } from '../conversations/conversations.service';
-import { buildChatPrompt } from '../prompts/chat-prompt';
+import { buildChatPrompt, type BuildChatPromptInput } from '../prompts/chat-prompt';
+import { QuotaService } from '../quota/quota.service';
 
 
 /**
@@ -43,6 +46,7 @@ export class AIService {
   constructor(
     @Inject(AI_PROVIDER) private readonly provider: AIProvider,
     private readonly conversations: ConversationsService,
+    private readonly quotaService: QuotaService,
     config: ConfigService,
   ) {
     this.aiTimeoutMs = config.get<number>('AI_TIMEOUT_MS', 15000);
@@ -54,12 +58,25 @@ export class AIService {
   generateChat(
     userId: number,
     assistantMessageId: number,
-    continueFrom?: string,
+    opts?: { continueFrom?: string; channel?: string; tone?: string; length?: string },
   ): Observable<SseEvent> {
     const subject = new Subject<SseEvent>();
 
     void (async () => {
       try {
+        // 0. 额度检查（continueFrom 场景不重复计费）
+        if (!opts?.continueFrom) {
+          const allowed = await this.quotaService.checkQuota(userId);
+          if (!allowed) {
+            subject.next({
+              event: 'error',
+              data: { message: '今日生成次数已用完，请明天再试' },
+            });
+            subject.complete();
+            return;
+          }
+        }
+
         // 1. 加载上下文（含归属校验）
         const { user, assistant } = await this.conversations.loadAssistantContext(
           userId,
@@ -67,12 +84,16 @@ export class AIService {
         );
 
         // 2. 构造 messages（含可选多图）
-        const messages = await buildChatPrompt({
+        const promptInput: BuildChatPromptInput = {
           text: user.content ?? '',
           imageUrls: user.imageUrls ?? undefined,
           preferDataUrl: true,
-          continueFrom,
-        });
+          continueFrom: opts?.continueFrom,
+          channel: opts?.channel,
+          tone: opts?.tone,
+          length: opts?.length,
+        };
+        const messages = await buildChatPrompt(promptInput);
 
         await this.conversations.updateAssistantMessage(assistantMessageId, {
           status: 'streaming',
@@ -81,11 +102,24 @@ export class AIService {
         // 3. 调 Provider + 推 chunk + 累积
         const fullText = await this.consumeProvider(messages, subject);
 
-        // 4. 持久化回复内容
+        // 4. 保存旧版本（重生成场景）并持久化新内容
+        if (assistant.content) {
+          await this.conversations.saveMessageVersion(assistantMessageId, assistant.content);
+        }
+
         await this.conversations.updateAssistantMessage(assistantMessageId, {
           content: fullText,
           status: 'done',
         });
+
+        // 5. 记录额度（非 continueFrom 场景）
+        if (!opts?.continueFrom) {
+          try {
+            await this.quotaService.recordUsage(userId);
+          } catch (e) {
+            this.logger.warn(`额度记录失败 userId=${userId}: ${(e as Error)?.message}`);
+          }
+        }
 
         subject.next({ event: 'done', data: {} });
         subject.complete();

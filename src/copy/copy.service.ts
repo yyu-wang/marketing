@@ -1,7 +1,8 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { CopyChannel, CopyEntity } from '../database/entities/copy.entity';
+import { MessageEntity } from '../database/entities/message.entity';
 import { ProjectEntity } from '../database/entities/project.entity';
 import { findOwnedOrFail } from '../common/utils/ownership';
 import { UpdateCopyDto } from './dto/copy.dto';
@@ -22,6 +23,8 @@ export class CopyService {
     private readonly copyRepo: Repository<CopyEntity>,
     @InjectRepository(ProjectEntity)
     private readonly projectRepo: Repository<ProjectEntity>,
+    @InjectRepository(MessageEntity)
+    private readonly messageRepo: Repository<MessageEntity>,
   ) {}
 
   /**
@@ -43,6 +46,57 @@ export class CopyService {
       },
       order: { createdAt: order === 'asc' ? 'ASC' : 'DESC' },
     });
+  }
+
+  /**
+   * 从对话消息创建文案
+   *
+   * 提取 assistant 消息的内容作为 CopyEntity 保存到指定项目。
+   */
+  async createFromMessage(
+    userId: number,
+    messageId: number,
+    projectId: number,
+    channel?: CopyChannel,
+  ): Promise<CopyEntity> {
+    const project = await findOwnedOrFail(this.projectRepo, projectId, userId, {
+      notFoundMsg: '项目不存在',
+      forbiddenMsg: '无权操作该项目',
+    });
+
+    const message = await this.messageRepo.findOne({ where: { id: messageId } });
+    if (!message || message.role !== 'assistant') {
+      throw new NotFoundException('消息不存在或非 assistant 消息');
+    }
+    if (!message.content) {
+      throw new BadRequestException('消息内容为空');
+    }
+
+    const detectedChannel = channel ?? this.detectChannel(message.content);
+
+    return this.copyRepo.save(
+      this.copyRepo.create({
+        projectId: project.id,
+        channel: detectedChannel,
+        content: message.content.slice(0, 1000),
+        isStarred: false,
+        isEdited: false,
+      }),
+    );
+  }
+
+  /** 根据内容关键词粗略检测渠道 */
+  private detectChannel(content: string): CopyChannel {
+    if (content.includes('小红书') || content.includes('种草') || content.includes('emoji')) {
+      return CopyChannel.XIAOHONGSHU;
+    }
+    if (content.includes('朋友圈') || content.includes('好友')) {
+      return CopyChannel.MOMENTS;
+    }
+    if (content.length < 30) {
+      return CopyChannel.AD_SLOGAN;
+    }
+    return CopyChannel.XIAOHONGSHU;
   }
 
   /**

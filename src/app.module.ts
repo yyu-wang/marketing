@@ -2,14 +2,20 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { RedisThrottlerStorageService } from './common/throttler/redis-throttler-storage.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminModule } from './admin/admin.module';
 import { AIModule } from './ai/ai.module';
+import { AnalyticsModule } from './analytics/analytics.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { ConversationsModule } from './conversations/conversations.module';
+import { CopyModule } from './copy/copy.module';
 import { createTypeOrmConfig } from './database/typeorm.config';
 import { HealthController } from './health.controller';
+import { ProjectModule } from './project/project.module';
+import { QuotaModule } from './quota/quota.module';
+import { RedisModule } from './database/redis.module';
 import { UploadModule } from './upload/upload.module';
 import { CosModule } from './cos/cos.module';
 
@@ -34,18 +40,31 @@ import { CosModule } from './cos/cos.module';
     }),
     ThrottlerModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => [
-        {
-          ttl: config.get<number>('THROTTLE_TTL', 60) * 1000,
-          limit: config.get<number>('THROTTLE_LIMIT', 60),
-        },
-      ],
+      useFactory: (config: ConfigService) => ({
+        storage: new RedisThrottlerStorageService({
+          host: config.get<string>('REDIS_HOST', '127.0.0.1'),
+          port: config.get<number>('REDIS_PORT', 6379),
+          password: config.get<string>('REDIS_PASSWORD') || undefined,
+          db: config.get<number>('REDIS_DB', 0),
+        }),
+        throttlers: [
+          {
+            ttl: config.get<number>('THROTTLE_TTL', 60) * 1000,
+            limit: config.get<number>('THROTTLE_LIMIT', 60),
+          },
+        ],
+      }),
     }),
     AdminModule,
+    AnalyticsModule,
     AuthModule,
+    CopyModule,
     CosModule,
     UploadModule,
     ConversationsModule,
+    ProjectModule,
+    QuotaModule,
+    RedisModule,
     AIModule,
   ],
   controllers: [HealthController],

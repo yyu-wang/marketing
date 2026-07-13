@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsEnum,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
@@ -70,6 +71,22 @@ export class ToggleStarDto {
   @IsOptional()
   @IsBoolean()
   isStarred?: boolean;
+}
+
+export class CreateFromMessageDto {
+  @IsInt()
+  @IsNotEmpty()
+  @Type(() => Number)
+  messageId: number;
+
+  @IsInt()
+  @IsNotEmpty()
+  @Type(() => Number)
+  projectId: number;
+
+  @IsOptional()
+  @IsEnum(CopyChannel)
+  channel?: CopyChannel;
 }
 
 /**

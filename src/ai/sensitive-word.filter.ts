@@ -1,36 +1,71 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { SensitiveWordEntity } from '../database/entities/sensitive-word.entity';
 
-/**
- * 敏感词过滤器
- *
- * 对应 PRD 5.4 降级机制中的"内容违规"：接入敏感词过滤，命中时拒绝返回。
- * 当前 MVP 阶段：使用内置词表 + DFA 模糊匹配（生产建议接入专业服务）。
- *
- * 扩展：
- *   - 词表可改为读取数据库 / 远程配置中心；
- *   - 算法可升级为 AC 自动机以支持上千词。
- */
+interface TrieNode {
+  children: Map<string, TrieNode>;
+  isEnd: boolean;
+  word: string;
+}
+
 @Injectable()
-export class SensitiveWordFilter {
-  /** MVP 内置词表，仅作占位示例 */
-  private readonly words: string[] = [
-    '最佳',
-    '第一',
-    '国家级',
-    '绝对',
-    // ... 由合规团队维护
-  ];
+export class SensitiveWordFilter implements OnModuleInit {
+  private readonly logger = new Logger(SensitiveWordFilter.name);
+  private root: TrieNode = { children: new Map(), isEnd: false, word: '' };
 
-  /** 判定是否包含违规词 */
-  contains(text: string): boolean {
-    if (!text) return false;
-    return this.words.some((w) => text.includes(w));
+  constructor(
+    @InjectRepository(SensitiveWordEntity)
+    private readonly wordRepo: Repository<SensitiveWordEntity>,
+  ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.reload();
   }
 
-  /**
-   * 返回首个命中词，用于日志与提示（不要直接回显给用户）
-   */
+  async reload(): Promise<void> {
+    const words = await this.wordRepo.find({
+      where: { isActive: true },
+      select: ['word'],
+    });
+    const root: TrieNode = { children: new Map(), isEnd: false, word: '' };
+    for (const { word } of words) {
+      this.insert(root, word);
+    }
+    this.root = root;
+    this.logger.log(`敏感词库已加载，共 ${words.length} 条`);
+  }
+
+  private insert(root: TrieNode, word: string): void {
+    let node = root;
+    for (const ch of word) {
+      if (!node.children.has(ch)) {
+        node.children.set(ch, { children: new Map(), isEnd: false, word: '' });
+      }
+      node = node.children.get(ch)!;
+    }
+    node.isEnd = true;
+    node.word = word;
+  }
+
+  contains(text: string): boolean {
+    return this.firstMatch(text) !== null;
+  }
+
   firstMatch(text: string): string | null {
-    return this.words.find((w) => text.includes(w)) ?? null;
+    if (!text) return null;
+    for (let i = 0; i < text.length; i++) {
+      let node = this.root;
+      for (let j = i; j < text.length; j++) {
+        const child = node.children.get(text[j]);
+        if (!child) break;
+        node = child;
+        if (node.isEnd) {
+          this.logger.warn(`敏感词命中: "${node.word}"`);
+          return node.word;
+        }
+      }
+    }
+    return null;
   }
 }

@@ -41,9 +41,12 @@ export class AIController {
     @CurrentUser() user: JwtPayload,
     @Query('assistantMessageId', ParseIntPipe) assistantMessageId: number,
     @Query('continueFrom') continueFrom?: string,
+    @Query('channel') channel?: string,
+    @Query('tone') tone?: string,
+    @Query('length') length?: string,
   ): Observable<{ type: string; data: string }> {
     return this.aiService
-      .generateChat(user.sub, assistantMessageId, continueFrom)
+      .generateChat(user.sub, assistantMessageId, { continueFrom, channel, tone, length })
       .pipe(
       map((evt: SseEvent) => ({
         type: evt.event,

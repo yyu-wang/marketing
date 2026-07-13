@@ -5,7 +5,10 @@ import { ProjectEntity } from './entities/project.entity';
 import { CopyEntity } from './entities/copy.entity';
 import { ConversationEntity } from './entities/conversation.entity';
 import { MessageEntity } from './entities/message.entity';
+import { MessageVersionEntity } from './entities/message-version.entity';
 import { PromptTemplateEntity } from './entities/prompt-template.entity';
+import { QuotaRecordEntity } from './entities/quota-record.entity';
+import { SensitiveWordEntity } from './entities/sensitive-word.entity';
 
 /**
  * TypeORM 配置工厂
@@ -33,7 +36,10 @@ export const createTypeOrmConfig = (
     CopyEntity,
     ConversationEntity,
     MessageEntity,
+    MessageVersionEntity,
     PromptTemplateEntity,
+    QuotaRecordEntity,
+    SensitiveWordEntity,
   ],
   synchronize: config.get<string>('DB_SYNC') === 'true',
   logging: config.get<string>('DB_LOGGING') === 'true',

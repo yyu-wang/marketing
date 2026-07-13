@@ -1,13 +1,19 @@
 import {
   BadRequestException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import Redis from 'ioredis';
+import { Like, Repository } from 'typeorm';
+import { REDIS_CLIENT } from '../database/redis.module';
 import { ConversationEntity } from '../database/entities/conversation.entity';
 import { MessageEntity } from '../database/entities/message.entity';
+import { MessageVersionEntity } from '../database/entities/message-version.entity';
 import { findOwnedOrFail } from '../common/utils/ownership';
+
+const CONV_CACHE_TTL_SEC = 300; // 5 分钟
 
 @Injectable()
 export class ConversationsService {
@@ -16,6 +22,9 @@ export class ConversationsService {
     private readonly conversationRepo: Repository<ConversationEntity>,
     @InjectRepository(MessageEntity)
     private readonly messageRepo: Repository<MessageEntity>,
+    @InjectRepository(MessageVersionEntity)
+    private readonly versionRepo: Repository<MessageVersionEntity>,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   // ---------------------------------------------------------------
@@ -36,14 +45,24 @@ export class ConversationsService {
    * 返回结构：
    *   [{ date: '今天', items: [{id,title,createdAt}] }, ...]
    */
-  async list(userId: number): Promise<
+  async list(userId: number, keyword?: string): Promise<
     Array<{
       date: string;
       items: Array<{ id: number; title: string; createdAt: Date }>;
     }>
   > {
+    // 无关键词搜索时走缓存
+    const cacheKey = `conv:list:${userId}`;
+    if (!keyword) {
+      const cached = await this.redis.get(cacheKey);
+      if (cached) return JSON.parse(cached) as Array<{ date: string; items: Array<{ id: number; title: string; createdAt: Date }> }>;
+    }
+
+    const where: Record<string, unknown> = { userId };
+    if (keyword) where.title = Like(`%${keyword}%`);
+
     const list = await this.conversationRepo.find({
-      where: { userId },
+      where,
       order: { updatedAt: 'DESC' },
       take: 100,
     });
@@ -70,10 +89,16 @@ export class ConversationsService {
         createdAt: c.createdAt,
       });
     }
-    return Array.from(groups.entries()).map(([date, items]) => ({
+    const result = Array.from(groups.entries()).map(([date, items]) => ({
       date,
       items,
     }));
+
+    if (!keyword) {
+      await this.redis.set(cacheKey, JSON.stringify(result), 'EX', CONV_CACHE_TTL_SEC);
+    }
+
+    return result;
   }
 
   async getDetail(
@@ -118,12 +143,15 @@ export class ConversationsService {
   ): Promise<ConversationEntity> {
     const conv = await this.findOwned(userId, conversationId);
     conv.title = title.trim() || conv.title;
-    return this.conversationRepo.save(conv);
+    const result = await this.conversationRepo.save(conv);
+    await this.invalidateListCache(userId);
+    return result;
   }
 
   async remove(userId: number, conversationId: number): Promise<void> {
     const conv = await this.findOwned(userId, conversationId);
     await this.conversationRepo.delete(conv.id);
+    await this.invalidateListCache(userId);
   }
 
   // ---------------------------------------------------------------
@@ -180,6 +208,8 @@ export class ConversationsService {
     conv.updatedAt = new Date();
     await this.conversationRepo.save(conv);
 
+    await this.invalidateListCache(userId);
+
     return {
       userMessageId: Number(userMsg.id),
       assistantMessageId: Number(assistantMsg.id),
@@ -223,6 +253,112 @@ export class ConversationsService {
     await this.messageRepo.update(assistantMessageId, patch);
   }
 
+  /**
+   * 编辑用户消息
+   *
+   * 仅允许编辑 role=user 的消息。
+   * 编辑后删除该消息之后的所有消息，并自动创建 assistant 占位消息，
+   * 前端直接拿 assistantMessageId 启动流式生成。
+   */
+  async editMessage(
+    userId: number,
+    conversationId: number,
+    messageId: number,
+    content: string,
+  ): Promise<{ conversationId: number; messageId: number; assistantMessageId: number }> {
+    const conv = await this.findOwned(userId, conversationId);
+
+    const message = await this.messageRepo.findOne({ where: { id: messageId, conversationId: conv.id } });
+    if (!message) throw new NotFoundException('消息不存在');
+    if (message.role !== 'user') throw new BadRequestException('仅允许编辑用户消息');
+
+    // 更新消息内容
+    message.content = content;
+    await this.messageRepo.save(message);
+
+    // 删除该消息之后的所有消息
+    const laterMessages = await this.messageRepo.find({
+      where: { conversationId: conv.id },
+      select: ['id'],
+    });
+    const idsToDelete = laterMessages
+      .filter((m) => Number(m.id) > Number(messageId))
+      .map((m) => m.id);
+    if (idsToDelete.length > 0) {
+      await this.messageRepo.delete(idsToDelete);
+    }
+
+    // 创建新的 assistant 占位消息
+    const assistantMsg = await this.messageRepo.save(
+      this.messageRepo.create({
+        conversationId: conv.id,
+        role: 'assistant',
+        content: null,
+        status: 'pending',
+      }),
+    );
+
+    conv.updatedAt = new Date();
+    await this.conversationRepo.save(conv);
+    await this.invalidateListCache(userId);
+
+    return {
+      conversationId: Number(conv.id),
+      messageId: Number(message.id),
+      assistantMessageId: Number(assistantMsg.id),
+    };
+  }
+
+  // ---------------------------------------------------------------
+  // 版本管理
+  // ---------------------------------------------------------------
+
+  /** 保存 assistant 消息的旧版本 */
+  async saveMessageVersion(messageId: number, content: string | null): Promise<void> {
+    if (!content) return;
+
+    const maxResult = await this.versionRepo.findOne({
+      where: { messageId },
+      order: { version: 'DESC' },
+      select: ['version'],
+    });
+    const nextVersion = (maxResult?.version ?? 0) + 1;
+
+    await this.versionRepo.save(
+      this.versionRepo.create({ messageId, version: nextVersion, content }),
+    );
+  }
+
+  /** 获取消息的所有历史版本 */
+  async getMessageVersions(messageId: number): Promise<MessageVersionEntity[]> {
+    return this.versionRepo.find({
+      where: { messageId },
+      order: { version: 'DESC' },
+      select: ['id', 'messageId', 'version', 'content', 'createdAt'],
+    });
+  }
+
+  /** 恢复到指定版本 */
+  async restoreMessageVersion(
+    userId: number,
+    conversationId: number,
+    messageId: number,
+    versionId: number,
+  ): Promise<{ content: string }> {
+    await this.findOwned(userId, conversationId);
+
+    const version = await this.versionRepo.findOne({ where: { id: versionId, messageId } });
+    if (!version) throw new NotFoundException('版本记录不存在');
+
+    const message = await this.messageRepo.findOne({ where: { id: messageId } });
+    if (!message) throw new NotFoundException('消息不存在');
+
+    message.content = version.content;
+    await this.messageRepo.save(message);
+
+    return { content: version.content ?? '' };
+  }
+
   // ---------------------------------------------------------------
   // 私有工具
   // ---------------------------------------------------------------
@@ -235,6 +371,10 @@ export class ConversationsService {
       notFoundMsg: '对话不存在',
       hideExistence: true,
     });
+  }
+
+  private async invalidateListCache(userId: number): Promise<void> {
+    await this.redis.del(`conv:list:${userId}`);
   }
 
   /** YYYY-MM-DD（UTC+8 自然日） */

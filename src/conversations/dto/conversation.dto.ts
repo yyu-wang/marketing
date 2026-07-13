@@ -1,4 +1,4 @@
-import { IsArray, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -29,6 +29,13 @@ export class PostMessageDto {
   @IsArray()
   @IsString({ each: true })
   imageUrls?: string[];
+}
+
+export class EditMessageDto {
+  @IsString()
+  @IsNotEmpty({ message: '消息内容不能为空' })
+  @MaxLength(2000)
+  content: string;
 }
 
 const MESSAGE_PAGE_SIZE_DEFAULT = 50;

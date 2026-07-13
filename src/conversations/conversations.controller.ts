@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -17,6 +18,7 @@ import {
 import { ConversationsService } from './conversations.service';
 import {
   CreateConversationDto,
+  EditMessageDto,
   PaginationQueryDto,
   PostMessageDto,
   RenameConversationDto,
@@ -29,9 +31,12 @@ export class ConversationsController {
   constructor(private readonly service: ConversationsService) {}
 
   @Get()
-  @ApiOperation({ summary: '对话列表（按日期分组）' })
-  list(@CurrentUser() user: JwtPayload) {
-    return this.service.list(user.sub);
+  @ApiOperation({ summary: '对话列表（按日期分组，支持 keyword 搜索）' })
+  list(
+    @CurrentUser() user: JwtPayload,
+    @Query('keyword') keyword?: string,
+  ) {
+    return this.service.list(user.sub, keyword);
   }
 
   @Post()
@@ -87,5 +92,40 @@ export class ConversationsController {
     @Body() dto: PostMessageDto,
   ) {
     return this.service.postMessage(user.sub, id, dto);
+  }
+
+  @Put(':conversationId/messages/:messageId')
+  @ApiOperation({
+    summary: '编辑用户消息',
+    description:
+      '仅允许编辑 role=user 的消息。编辑后删除该消息之后的所有消息，前端重新触发生成。',
+  })
+  editMessage(
+    @CurrentUser() user: JwtPayload,
+    @Param('conversationId', ParseIntPipe) conversationId: number,
+    @Param('messageId', ParseIntPipe) messageId: number,
+    @Body() dto: EditMessageDto,
+  ) {
+    return this.service.editMessage(user.sub, conversationId, messageId, dto.content);
+  }
+
+  @Get(':conversationId/messages/:messageId/versions')
+  @ApiOperation({ summary: '获取消息的历史版本列表' })
+  getMessageVersions(
+    @Param('conversationId', ParseIntPipe) conversationId: number,
+    @Param('messageId', ParseIntPipe) messageId: number,
+  ) {
+    return this.service.getMessageVersions(messageId);
+  }
+
+  @Patch(':conversationId/messages/:messageId/versions/:versionId/restore')
+  @ApiOperation({ summary: '恢复到指定的历史版本' })
+  restoreMessageVersion(
+    @CurrentUser() user: JwtPayload,
+    @Param('conversationId', ParseIntPipe) conversationId: number,
+    @Param('messageId', ParseIntPipe) messageId: number,
+    @Param('versionId', ParseIntPipe) versionId: number,
+  ) {
+    return this.service.restoreMessageVersion(user.sub, conversationId, messageId, versionId);
   }
 }
