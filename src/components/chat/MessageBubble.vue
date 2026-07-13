@@ -28,8 +28,36 @@
           class="message-bubble__separator"
         />
 
-        <div v-if="message.content" class="message-bubble__text">
+        <!-- 编辑模式 -->
+        <div v-if="isEditing" class="message-bubble__edit-area">
+          <el-input
+            ref="editInputRef"
+            v-model="editText"
+            type="textarea"
+            :rows="3"
+            maxlength="2000"
+            @keyup.enter.ctrl="confirmEdit"
+          />
+          <div class="message-bubble__edit-actions">
+            <el-button size="small" @click="cancelEdit">取消</el-button>
+            <el-button size="small" type="primary" :loading="editLoading" @click="confirmEdit">
+              确认并重新生成
+            </el-button>
+          </div>
+        </div>
+
+        <div v-else-if="message.content" class="message-bubble__text">
           {{ message.content }}
+        </div>
+
+        <!-- 操作栏 -->
+        <div
+          v-if="!isEditing && message.content"
+          class="message-bubble__user-actions"
+        >
+          <el-button link size="small" @click="startEdit">
+            <el-icon><Edit /></el-icon>
+          </el-button>
         </div>
       </div>
     </template>
@@ -85,22 +113,192 @@
               <span class="action-btn__text">{{ message.errorMessage === '已中止生成' ? '继续' : '重试' }}</span>
             </el-button>
           </template>
+          <!-- 保存到项目 -->
+          <el-button
+            v-if="message.role === 'assistant' && message.status === 'done'"
+            class="action-btn"
+            size="small"
+            @click="openSaveDialog"
+          >
+            <el-icon><FolderAdd /></el-icon>
+            <span class="action-btn__text">保存</span>
+          </el-button>
+          <!-- 版本历史 -->
+          <el-dropdown
+            v-if="message.role === 'assistant' && message.status === 'done'"
+            trigger="click"
+            @command="(versionId: number) => handleRestoreVersion(versionId)"
+            @visible-change="onVersionDropdownVisible"
+          >
+            <el-button class="action-btn" size="small">
+              <el-icon><Clock /></el-icon>
+              <span class="action-btn__text">版本</span>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-if="versions.length === 0" disabled>暂无历史版本</el-dropdown-item>
+                <el-dropdown-item
+                  v-for="v in versions"
+                  :key="v.id"
+                  :command="v.id"
+                >
+                  <span>版本 {{ v.version }}</span>
+                  <span class="version-date">{{ formatDate(v.createdAt) }}</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
     </template>
+
+    <!-- 保存到项目对话框 -->
+    <el-dialog
+      v-model="saveDialogVisible"
+      title="保存到项目"
+      width="420px"
+      :close-on-click-modal="false"
+    >
+      <el-form label-width="80px">
+        <el-form-item label="选择项目">
+          <el-select v-model="saveProjectId" placeholder="请选择项目" style="width: 100%" filterable>
+            <el-option
+              v-for="p in projectOptions"
+              :key="p.id"
+              :label="p.name"
+              :value="p.id"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="saveDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="saveLoading" @click="handleSaveToProject">
+          确定
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { Loading, RefreshRight, WarningFilled } from '@element-plus/icons-vue'
+import { ref, nextTick } from 'vue'
+import { ElMessage } from 'element-plus'
+import { Clock, Edit, FolderAdd, Loading, RefreshRight, WarningFilled } from '@element-plus/icons-vue'
 import CopyButton from '@/components/common/CopyButton.vue'
+import { getMessageVersions, restoreMessageVersion } from '@/api/conversation'
+import { saveMessageToProject } from '@/api/copy'
+import { getProjectList } from '@/api/project'
+import { useConversationStore } from '@/stores/conversation'
+import { formatDate } from '@/utils/format'
 import type { Message } from '@/types/conversation'
 
-defineProps<{
+const props = defineProps<{
   message: Message
   streamingDelta?: string
   onRetry?: () => void
 }>()
+
+const store = useConversationStore()
+const isEditing = ref(false)
+const editText = ref('')
+const editLoading = ref(false)
+const editInputRef = ref<InstanceType<typeof import('element-plus').ElInput> | null>(null)
+
+const startEdit = () => {
+  editText.value = props.message.content ?? ''
+  isEditing.value = true
+  void nextTick(() => {
+    editInputRef.value?.focus()
+  })
+}
+
+const cancelEdit = () => {
+  isEditing.value = false
+  editText.value = ''
+}
+
+const confirmEdit = async () => {
+  if (!editText.value.trim()) {
+    ElMessage.warning('内容不能为空')
+    return
+  }
+  editLoading.value = true
+  try {
+    await store.editAndResend(props.message.id, editText.value.trim())
+    isEditing.value = false
+  } catch {
+    /* error handled by interceptor */
+  } finally {
+    editLoading.value = false
+  }
+}
+
+// 版本管理
+interface MessageVersion {
+  id: number
+  version: number
+  content: string
+  createdAt: string
+}
+const versions = ref<MessageVersion[]>([])
+
+const onVersionDropdownVisible = async (visible: boolean) => {
+  if (!visible) return
+  if (!store.current) return
+  try {
+    versions.value = await getMessageVersions(store.current.id, props.message.id)
+  } catch {
+    /* ignore */
+  }
+}
+
+const handleRestoreVersion = async (versionId: number) => {
+  if (!store.current) return
+  try {
+    const result = await restoreMessageVersion(store.current.id, props.message.id, versionId)
+    const msg = store.findMessage(props.message.id)
+    if (msg) {
+      msg.content = result.content
+    }
+    ElMessage.success('已恢复到选中版本')
+  } catch {
+    /* ignore */
+  }
+}
+
+// 保存到项目
+const saveDialogVisible = ref(false)
+const saveProjectId = ref<number | null>(null)
+const saveLoading = ref(false)
+const projectOptions = ref<Array<{ id: number; name: string }>>([])
+
+const openSaveDialog = async () => {
+  saveProjectId.value = null
+  saveDialogVisible.value = true
+  try {
+    projectOptions.value = await getProjectList()
+  } catch {
+    /* ignore */
+  }
+}
+
+const handleSaveToProject = async () => {
+  if (!saveProjectId.value) {
+    ElMessage.warning('请选择项目')
+    return
+  }
+  saveLoading.value = true
+  try {
+    await saveMessageToProject(props.message.id, saveProjectId.value)
+    ElMessage.success('已保存到项目')
+    saveDialogVisible.value = false
+  } catch {
+    /* ignore */
+  } finally {
+    saveLoading.value = false
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -284,6 +482,37 @@ defineProps<{
       white-space: pre-wrap;
     }
   }
+
+  &__user-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 4px;
+    opacity: 0.4;
+    transition: opacity 0.2s;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &__edit-area {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 320px;
+  }
+
+  &__edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+}
+
+.version-date {
+  font-size: 11px;
+  color: $text-muted;
+  margin-left: 8px;
 }
 
 .action-btn {

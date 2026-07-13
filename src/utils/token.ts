@@ -4,6 +4,7 @@ const USER_KEY = 'marketing_wise_user'
 export interface StoredUser {
   userId: number
   email: string
+  role: string
 }
 
 export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY)

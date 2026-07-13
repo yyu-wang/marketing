@@ -7,7 +7,10 @@
     </span>
     <template #dropdown>
       <el-dropdown-menu>
-        <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+        <el-dropdown-item command="dashboard">数据看板</el-dropdown-item>
+        <el-dropdown-item command="projects">项目管理</el-dropdown-item>
+        <el-dropdown-item v-if="auth.isAdmin" command="admin" divided>管理后台</el-dropdown-item>
+        <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
       </el-dropdown-menu>
     </template>
   </el-dropdown>
@@ -26,6 +29,18 @@ const router = useRouter()
 const initial = computed(() => (auth.user?.email?.[0] ?? 'U').toUpperCase())
 
 const onCommand = async (command: string) => {
+  if (command === 'dashboard') {
+    await router.push('/dashboard')
+    return
+  }
+  if (command === 'projects') {
+    await router.push('/projects')
+    return
+  }
+  if (command === 'admin') {
+    await router.push('/admin')
+    return
+  }
   if (command !== 'logout') return
   try {
     await ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning' })

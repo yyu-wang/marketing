@@ -6,6 +6,17 @@
         <span class="chat-sidebar__name">Marketing Wise</span>
       </div>
 
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜索对话..."
+        :prefix-icon="Search"
+        clearable
+        size="small"
+        class="chat-sidebar__search"
+        @input="onSearchInput"
+        @clear="onSearchClear"
+      />
+
       <el-button
         class="chat-sidebar__new"
         type="primary"
@@ -65,24 +76,45 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { MoreFilled, Plus } from '@element-plus/icons-vue'
+import { MoreFilled, Plus, Search } from '@element-plus/icons-vue'
 import UserMenu from '@/components/layout/UserMenu.vue'
 import { useConversationStore } from '@/stores/conversation'
 import type { ConversationSummary } from '@/types/conversation'
 
+const SEARCH_DEBOUNCE_MS = 300
+
+const emit = defineEmits<{ (e: 'select'): void }>()
+
 const store = useConversationStore()
 const router = useRouter()
+
+const searchKeyword = ref('')
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+
+const onSearchInput = () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    store.fetchList(searchKeyword.value || undefined)
+  }, SEARCH_DEBOUNCE_MS)
+}
+
+const onSearchClear = () => {
+  store.fetchList()
+}
 
 function onNew() {
   store.newConversation()
   void router.push('/')
+  emit('select')
 }
 
 function onOpen(id: number) {
   if (store.currentId === id) return
   void router.push(`/c/${id}`)
+  emit('select')
 }
 
 async function onAction(cmd: string, item: ConversationSummary) {
@@ -157,6 +189,10 @@ async function onAction(cmd: string, item: ConversationSummary) {
     color: $text-primary;
   }
 
+  &__search {
+    margin-bottom: 10px;
+  }
+
   &__new {
     margin: 4px 0 18px;
     width: 100%;
@@ -199,6 +235,8 @@ async function onAction(cmd: string, item: ConversationSummary) {
     color: $text-secondary;
     font-size: 13px;
     transition: background 0.15s ease;
+    content-visibility: auto;
+    contain-intrinsic-size: 0 36px;
 
     &:hover {
       background: $bg-card-hover;
@@ -241,5 +279,6 @@ async function onAction(cmd: string, item: ConversationSummary) {
     flex-shrink: 0;
     background: rgba(10, 10, 20, 0.92);
   }
+
 }
 </style>

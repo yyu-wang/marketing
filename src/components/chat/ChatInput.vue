@@ -24,6 +24,45 @@
       </el-tooltip>
     </div>
 
+    <!-- 渠道选择 -->
+    <div class="chat-input__options">
+      <el-radio-group v-model="store.channel" size="small">
+        <el-radio-button value="xiaohongshu">小红书</el-radio-button>
+        <el-radio-button value="moments">朋友圈</el-radio-button>
+        <el-radio-button value="ad_slogan">广告语</el-radio-button>
+      </el-radio-group>
+
+      <el-button
+        text
+        size="small"
+        class="chat-input__advanced-toggle"
+        @click="showAdvanced = !showAdvanced"
+      >
+        高级选项
+        <el-icon><ArrowDown v-if="!showAdvanced" /><ArrowUp v-else /></el-icon>
+      </el-button>
+    </div>
+
+    <!-- 高级选项 -->
+    <div v-if="showAdvanced" class="chat-input__advanced">
+      <div class="chat-input__advanced-item">
+        <label class="chat-input__label">语气</label>
+        <el-select v-model="store.tone" size="small" clearable placeholder="默认" style="width: 130px">
+          <el-option label="专业" value="professional" />
+          <el-option label="活泼" value="lively" />
+          <el-option label="文艺" value="literary" />
+        </el-select>
+      </div>
+      <div class="chat-input__advanced-item">
+        <label class="chat-input__label">长度</label>
+        <el-select v-model="store.length" size="small" clearable placeholder="默认" style="width: 130px">
+          <el-option label="简短" value="short" />
+          <el-option label="适中" value="medium" />
+          <el-option label="详细" value="long" />
+        </el-select>
+      </div>
+    </div>
+
     <div class="chat-input__row">
       <textarea
         ref="textareaRef"
@@ -70,15 +109,22 @@
     />
 
     <div class="chat-input__hint">
-      Enter 发送，Shift + Enter 换行 · 最多 9 张图片 · jpg / png / webp
+      <span>Enter 发送，Shift + Enter 换行 · 最多 9 张图片 · jpg / png / webp</span>
+      <span class="chat-input__quota">
+        今日已用 {{ quotaUsed }} / {{ quotaLimit }}
+        <template v-if="quotaLimit > 0 && quotaUsed >= quotaLimit">
+          <el-tag size="small" type="danger">已用完</el-tag>
+        </template>
+      </span>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Close, Loading, Plus, Promotion, VideoPause } from '@element-plus/icons-vue'
+import { ArrowDown, ArrowUp, Close, Loading, Plus, Promotion, VideoPause } from '@element-plus/icons-vue'
+import { getQuotaStatus } from '@/api/quota'
 import { uploadImage } from '@/api/upload'
 import { useConversationStore } from '@/stores/conversation'
 
@@ -100,6 +146,19 @@ const imageUrls = ref<string[]>([])
 const uploading = ref(false)
 const textareaRef = ref<HTMLTextAreaElement | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const showAdvanced = ref(false)
+const quotaUsed = ref(0)
+const quotaLimit = ref(0)
+
+const fetchQuota = async () => {
+  try {
+    const status = await getQuotaStatus()
+    quotaUsed.value = status.todayUsed
+    quotaLimit.value = status.dailyLimit
+  } catch {
+    /* silently ignore */
+  }
+}
 
 const placeholder = computed(
   () => props.placeholder || '直接输入文本 / 图片 + 文本，即可开始创作...',
@@ -115,7 +174,8 @@ const canSend = computed(
   () =>
     !props.disabled &&
     !uploading.value &&
-    (text.value.trim().length > 0 || imageUrls.value.length > 0),
+    (text.value.trim().length > 0 || imageUrls.value.length > 0) &&
+    !(quotaLimit.value > 0 && quotaUsed.value >= quotaLimit.value),
 )
 
 function triggerPick() {
@@ -188,7 +248,13 @@ function submit() {
   text.value = ''
   imageUrls.value = []
   void nextTick(autoGrow)
+  // 刷新额度显示
+  void fetchQuota()
 }
+
+onMounted(() => {
+  void fetchQuota()
+})
 </script>
 
 <style scoped lang="scss">
@@ -204,6 +270,39 @@ function submit() {
   border: 1px solid $border-color;
   backdrop-filter: blur(20px);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+
+  &__options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  &__advanced-toggle {
+    color: $text-muted;
+    font-size: 12px;
+  }
+
+  &__advanced {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+  }
+
+  &__advanced-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__label {
+    font-size: 12px;
+    color: $text-muted;
+    white-space: nowrap;
+  }
 
   &__image-row {
     display: flex;
@@ -306,7 +405,17 @@ function submit() {
     margin-top: 8px;
     color: $text-muted;
     font-size: 12px;
-    text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__quota {
+    color: $text-muted;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
   &__send-btn {

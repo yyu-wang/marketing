@@ -34,6 +34,53 @@ const routes: RouteRecordRaw[] = [
         props: (route) => ({ conversationId: Number(route.params.id) }),
         meta: { title: '对话' },
       },
+      {
+        path: 'dashboard',
+        name: 'dashboard',
+        component: () => import('@/views/DashboardView.vue'),
+        meta: { title: '数据看板' },
+      },
+      {
+        path: 'projects',
+        name: 'projects',
+        component: () => import('@/views/ProjectsView.vue'),
+        meta: { title: '项目管理' },
+      },
+      {
+        path: 'projects/:id',
+        name: 'project-detail',
+        component: () => import('@/views/ProjectDetailView.vue'),
+        meta: { title: '项目详情' },
+      },
+    ],
+  },
+  {
+    path: ROUTE_PATH.ADMIN,
+    component: () => import('@/components/layout/AdminLayout.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+    children: [
+      {
+        path: 'users',
+        name: 'admin-users',
+        component: () => import('@/views/admin/AdminUsersView.vue'),
+        meta: { title: '用户管理' },
+      },
+      {
+        path: 'templates',
+        name: 'admin-templates',
+        component: () => import('@/views/admin/AdminTemplatesView.vue'),
+        meta: { title: '模板管理' },
+      },
+      {
+        path: 'sensitive-words',
+        name: 'admin-sensitive-words',
+        component: () => import('@/views/admin/AdminSensitiveWordsView.vue'),
+        meta: { title: '敏感词管理' },
+      },
+      {
+        path: '',
+        redirect: ROUTE_PATH.ADMIN_USERS,
+      },
     ],
   },
   {
@@ -58,6 +105,9 @@ router.beforeEach((to) => {
     return { path: ROUTE_PATH.LOGIN, query: { redirect: to.fullPath } }
   }
   if (auth.isLoggedIn && (to.path === ROUTE_PATH.LOGIN || to.path === ROUTE_PATH.REGISTER)) {
+    return { path: ROUTE_PATH.HOME }
+  }
+  if (to.meta?.requiresAdmin && !auth.isAdmin) {
     return { path: ROUTE_PATH.HOME }
   }
   return true

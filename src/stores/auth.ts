@@ -22,6 +22,7 @@ export const useAuthStore = defineStore('auth', {
   }),
   getters: {
     isLoggedIn: (state) => Boolean(state.token),
+    isAdmin: (state) => state.user?.role === 'admin',
   },
   actions: {
     hydrate() {
@@ -32,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
     },
     applyAuthResult(result: AuthResult) {
       this.token = result.token
-      this.user = { userId: result.userId, email: result.email }
+      this.user = { userId: result.userId, email: result.email, role: result.role }
       setToken(result.token)
       setStoredUser(this.user)
     },

@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 import {
   createConversation,
   deleteConversation,
+  editMessage,
   getConversation,
   listConversations,
   postMessage,
@@ -30,6 +31,9 @@ interface ConversationState {
   streamingMessageId: number | null
   streamingDelta: string
   streamHandle: StreamHandle | null
+  channel: string
+  tone: string
+  length: string
 }
 
 export const useConversationStore = defineStore('conversation', {
@@ -42,6 +46,9 @@ export const useConversationStore = defineStore('conversation', {
     streamingMessageId: null,
     streamingDelta: '',
     streamHandle: null,
+    channel: 'xiaohongshu',
+    tone: '',
+    length: '',
   }),
   getters: {
     currentId: (state) => state.current?.id ?? null,
@@ -56,10 +63,10 @@ export const useConversationStore = defineStore('conversation', {
     },
   },
   actions: {
-    async fetchList() {
+    async fetchList(keyword?: string) {
       this.listLoading = true
       try {
-        this.list = await listConversations()
+        this.list = await listConversations(keyword)
       } finally {
         this.listLoading = false
       }
@@ -199,7 +206,12 @@ export const useConversationStore = defineStore('conversation', {
             if (this.streaming) this.finalizeStream()
           },
         },
-        continueFrom,
+        {
+          continueFrom,
+          channel: this.channel || undefined,
+          tone: this.tone || undefined,
+          length: this.length || undefined,
+        },
       )
     },
 
@@ -249,6 +261,40 @@ export const useConversationStore = defineStore('conversation', {
       const updated = await renameConversation(this.current.id, title)
       this.current.title = updated.title
       await this.fetchList()
+    },
+
+    async editAndResend(messageId: number, content: string) {
+      if (!this.current) return
+      const conversationId = this.current.id
+
+      const result = await editMessage(conversationId, messageId, content)
+
+      // 从本地消息列表中移除该消息之后的所有消息
+      const idx = this.current.messages.findIndex((m) => m.id === messageId)
+      if (idx >= 0) {
+        // 更新被编辑的消息内容
+        this.current.messages[idx].content = content
+        // 消息列表按 DESC 存储（最新在开头），idx 位置是被编辑消息
+        // 需要删除 idx 之前的所有消息（更新的消息），保留 idx 及之后的（更早的历史）
+        this.current.messages = this.current.messages.filter(
+          (_, i) => i >= idx,
+        )
+      }
+
+      // 直接使用后端返回的 assistant 占位消息启动流式生成
+      const now = new Date().toISOString()
+      const assistantMsg: Message = {
+        id: result.assistantMessageId,
+        conversationId,
+        role: 'assistant',
+        content: null,
+        imageUrls: null,
+        status: 'streaming',
+        createdAt: now,
+        updatedAt: now,
+      }
+      this.current.messages.unshift(assistantMsg)
+      this.startStream(assistantMsg.id)
     },
 
     async remove(id: number) {
