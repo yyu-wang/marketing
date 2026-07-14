@@ -55,5 +55,4 @@ jobs:
             cd /opt/copywise
             echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose -f docker-compose.prod.yml pull admin
-            docker rm -f marketing-wise-admin 2>/dev/null || true
-            docker compose -f docker-compose.prod.yml up -d --no-deps admin
+            docker compose -f docker-compose.prod.yml up -d --no-deps --force-recreate admin
