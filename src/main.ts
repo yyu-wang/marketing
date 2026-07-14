@@ -1,6 +1,7 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
@@ -9,10 +10,39 @@ import { ResponseTransformInterceptor } from './common/interceptors/response-tra
 
 const GLOBAL_PREFIX = 'api';
 
+const MAX_BOOTSTRAP_RETRIES = 5;
+const BOOTSTRAP_RETRY_DELAY_MS = 3000;
+
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log'],
-  });
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= MAX_BOOTSTRAP_RETRIES; attempt++) {
+    try {
+      const app = await NestFactory.create(AppModule, {
+        logger: ['error', 'warn', 'log'],
+      });
+      await startServer(app);
+      return;
+    } catch (err) {
+      lastError = err;
+      Logger.error(
+        `Bootstrap attempt ${attempt}/${MAX_BOOTSTRAP_RETRIES} failed: ${err instanceof Error ? err.message : String(err)}`,
+        'Bootstrap',
+      );
+      if (attempt < MAX_BOOTSTRAP_RETRIES) {
+        await new Promise((resolve) => setTimeout(resolve, BOOTSTRAP_RETRY_DELAY_MS));
+      }
+    }
+  }
+
+  Logger.error(
+    `Bootstrap failed after ${MAX_BOOTSTRAP_RETRIES} attempts`,
+    'Bootstrap',
+  );
+  throw lastError;
+}
+
+async function startServer(app: INestApplication): Promise<void> {
 
   const config = app.get(ConfigService);
   const port = config.get<number>('PORT', 3000);

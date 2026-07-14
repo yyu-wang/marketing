@@ -45,6 +45,8 @@ export const createTypeOrmConfig = (
   logging: config.get<string>('DB_LOGGING') === 'true',
   charset: 'utf8mb4',
   timezone: 'Z',
+  retryAttempts: 5,
+  retryDelay: 3000,
   extra: {
     connectionLimit: 20,
   },
