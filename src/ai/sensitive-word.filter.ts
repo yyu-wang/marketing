@@ -20,7 +20,12 @@ export class SensitiveWordFilter implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    await this.reload();
+    try {
+      await this.reload();
+    } catch (err: any) {
+      this.logger.error(`敏感词库加载失败，将以空词库继续运行: ${err?.message ?? err}`);
+      this.root = { children: new Map(), isEnd: false, word: '' };
+    }
   }
 
   async reload(): Promise<void> {

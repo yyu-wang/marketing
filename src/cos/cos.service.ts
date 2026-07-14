@@ -2,6 +2,8 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import COS from 'cos-nodejs-sdk-v5';
 
+const COS_HEAD_BUCKET_TIMEOUT_MS = 5000;
+
 @Injectable()
 export class CosService implements OnModuleInit {
   private readonly logger = new Logger(CosService.name);
@@ -30,9 +32,14 @@ export class CosService implements OnModuleInit {
     this.cos = new COS({ SecretId: secretId, SecretKey: secretKey });
     this.logger.log(`COS 客户端已初始化，Bucket: ${this.bucket}, Region: ${this.region}`);
 
-    // 启动时校验连通性
+    // 启动时校验连通性（带超时保护，避免网络不通阻塞启动）
     try {
-      await this.cos.headBucket({ Bucket: this.bucket, Region: this.region });
+      await Promise.race([
+        this.cos.headBucket({ Bucket: this.bucket, Region: this.region }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('COS headBucket 超时')), COS_HEAD_BUCKET_TIMEOUT_MS),
+        ),
+      ]);
       this.logger.log(`COS 桶连通性校验通过: ${this.bucket}`);
     } catch (err: any) {
       this.logger.error(

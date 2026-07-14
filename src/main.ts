@@ -15,10 +15,11 @@ const BOOTSTRAP_RETRY_DELAY_MS = 3000;
 
 async function bootstrap(): Promise<void> {
   let lastError: unknown;
+  let app: INestApplication | undefined;
 
   for (let attempt = 1; attempt <= MAX_BOOTSTRAP_RETRIES; attempt++) {
     try {
-      const app = await NestFactory.create(AppModule, {
+      app = await NestFactory.create(AppModule, {
         logger: ['error', 'warn', 'log'],
       });
       await startServer(app);
@@ -29,6 +30,10 @@ async function bootstrap(): Promise<void> {
         `Bootstrap attempt ${attempt}/${MAX_BOOTSTRAP_RETRIES} failed: ${err instanceof Error ? err.message : String(err)}`,
         'Bootstrap',
       );
+      if (app) {
+        try { await app.close(); } catch (_) { /* cleanup best-effort */ }
+        app = undefined;
+      }
       if (attempt < MAX_BOOTSTRAP_RETRIES) {
         await new Promise((resolve) => setTimeout(resolve, BOOTSTRAP_RETRY_DELAY_MS));
       }
@@ -104,7 +109,7 @@ async function startServer(app: INestApplication): Promise<void> {
 
   app.enableShutdownHooks();
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   Logger.log(
     `🚀 Marketing Wise server is listening on http://localhost:${port}/${GLOBAL_PREFIX}`,
     'Bootstrap',
