@@ -45,14 +45,16 @@ jobs:
     needs: build-api
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
       - name: Sync compose file to server
-        uses: appleboy/scp-action@v0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: docker-compose.prod.yml
-          target: /opt/copywise/
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          echo "$SSH_KEY" > key.pem
+          chmod 600 key.pem
+          scp -o StrictHostKeyChecking=no -i key.pem docker-compose.prod.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/copywise/
+          rm -f key.pem
 
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
