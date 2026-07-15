@@ -45,6 +45,15 @@ jobs:
     needs: build-api
     runs-on: ubuntu-latest
     steps:
+      - name: Sync compose file to server
+        uses: appleboy/scp-action@v0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: docker-compose.prod.yml
+          target: /opt/copywise/
+
       - name: Deploy to server
         uses: appleboy/ssh-action@v1
         with:
