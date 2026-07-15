@@ -58,6 +58,7 @@ import type { FormInstance, FormRules } from 'element-plus'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '@/stores/auth'
 import { EMAIL_RULES, PASSWORD_BASE_RULES, passwordPatternRule } from '@/utils/validation'
+import { sha256 } from '@/utils/crypto'
 
 const auth = useAuthStore()
 const router = useRouter()
@@ -92,7 +93,8 @@ const onSubmit = async (instance: FormInstance | null) => {
     if (!valid) return
     loading.value = true
     try {
-      await auth.register({ email: form.email.trim(), password: form.password })
+      const hashedPassword = await sha256(form.password)
+      await auth.register({ email: form.email.trim(), password: hashedPassword, hashVersion: 1 })
       ElMessage.success('注册成功')
       await router.replace('/')
     } catch {

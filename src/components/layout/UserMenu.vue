@@ -19,7 +19,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { ArrowDown } from '@element-plus/icons-vue'
-import { ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
@@ -41,14 +40,15 @@ const onCommand = async (command: string) => {
     await router.push('/admin')
     return
   }
-  if (command !== 'logout') return
-  try {
-    await ElMessageBox.confirm('确定要退出登录吗？', '提示', { type: 'warning' })
-    await auth.logout()
-    await router.replace('/login')
-  } catch {
-    /* 取消 */
+  if (command === 'logout') {
+    await handleLogout()
+    return
   }
+}
+
+const handleLogout = async () => {
+  await auth.logout()
+  await router.replace('/login')
 }
 </script>
 
@@ -75,4 +75,6 @@ const onCommand = async (command: string) => {
     white-space: nowrap;
   }
 }
+
+
 </style>
