@@ -4,6 +4,7 @@ import { Button, Card, Form, Input, message, Typography } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { loginApi } from '@/api/auth';
 import { useAuthStore } from '@/stores/auth';
+import { sha256 } from '@/utils/crypto';
 
 const { Title } = Typography;
 
@@ -15,7 +16,8 @@ export const LoginPage = () => {
   const onFinish = async (values: { email: string; password: string }) => {
     setLoading(true);
     try {
-      const res = await loginApi(values);
+      const hashedPassword = await sha256(values.password);
+      const res = await loginApi({ email: values.email, password: hashedPassword, hashVersion: 1 });
       const { token, userId, email, role } = res.data.data;
 
       if (role !== 'admin') {

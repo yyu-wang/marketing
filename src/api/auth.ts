@@ -8,5 +8,5 @@ interface LoginResult {
   role: string;
 }
 
-export const loginApi = (data: { email: string; password: string }) =>
+export const loginApi = (data: { email: string; password: string; hashVersion: number }) =>
   http.post<ApiResponse<LoginResult>>('/auth/login', data);
