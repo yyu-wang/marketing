@@ -9,6 +9,7 @@ import { MessageEntity } from './entities/message.entity';
 import { CopyEntity } from './entities/copy.entity';
 import { ProjectEntity } from './entities/project.entity';
 import { hashSync } from 'bcryptjs';
+import { createHash } from 'crypto';
 
 async function seed() {
   const ds = new DataSource({
@@ -34,7 +35,8 @@ async function seed() {
   const repo = ds.getRepository(UserEntity);
   const admin = repo.create({
     email: 'admin@copywise.com',
-    passwordHash: hashSync('admin123456', 12),
+    passwordHash: hashSync(createHash('sha256').update('admin123456').digest('hex'), 12),
+    passwordVersion: 1,
     role: 'admin',
     isActive: 1,
   });

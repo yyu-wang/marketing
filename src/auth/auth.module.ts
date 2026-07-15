@@ -7,6 +7,7 @@ import { UserEntity } from '../database/entities/user.entity';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { PasswordMigrationService } from './password-migration.service';
 
 /**
  * Auth 模块
@@ -24,7 +25,7 @@ import { JwtStrategy } from './jwt.strategy';
     JwtModule.register({}), // 密钥在 signAsync 时显式传入，便于多环境
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtStrategy, PassportModule],
+  providers: [AuthService, JwtStrategy, PasswordMigrationService],
+  exports: [AuthService, JwtStrategy, PassportModule, PasswordMigrationService],
 })
 export class AuthModule {}

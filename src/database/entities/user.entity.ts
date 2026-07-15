@@ -47,6 +47,14 @@ export class UserEntity {
   @Column({ type: 'tinyint', width: 1, name: 'is_active', default: 1 })
   isActive: number;
 
+  /**
+   * 密码哈希版本
+   * 0 = bcrypt(明文) — 旧格式
+   * 1 = bcrypt(SHA256(明文)) — 新格式（客户端 SHA-256 后传输）
+   */
+  @Column({ type: 'tinyint', width: 1, name: 'password_version', default: 0 })
+  passwordVersion: number;
+
   // -------------------------------------------------------------------
   // 关系：一个用户可创建多个项目、多条额度记录
   // -------------------------------------------------------------------

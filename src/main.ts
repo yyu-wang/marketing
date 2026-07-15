@@ -7,6 +7,7 @@ import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { ResponseTransformInterceptor } from './common/interceptors/response-transform.interceptor';
+import { PasswordMigrationService } from './auth/password-migration.service';
 
 const GLOBAL_PREFIX = 'api';
 
@@ -108,6 +109,10 @@ async function startServer(app: INestApplication): Promise<void> {
   });
 
   app.enableShutdownHooks();
+
+  // 生产部署时自动迁移旧格式密码（幂等，已迁移用户不受影响）
+  const migrationService = app.get(PasswordMigrationService);
+  await migrationService.migrate();
 
   await app.listen(port, '0.0.0.0');
   Logger.log(
