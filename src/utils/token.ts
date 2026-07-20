@@ -5,6 +5,7 @@ export interface StoredUser {
   userId: number
   email: string
   role: string
+  nickname: string
 }
 
 export const getToken = (): string | null => localStorage.getItem(TOKEN_KEY)

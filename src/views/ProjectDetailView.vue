@@ -302,51 +302,58 @@ onMounted(() => {
   }
 
   &__copies {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 16px;
     min-height: 120px;
   }
 }
 
 .copy-card {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-  margin-bottom: 10px;
-  transition: border-color 0.2s;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  transition: border-color 0.2s, background 0.2s;
 
   &:hover {
-    border-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(64, 158, 255, 0.25);
+    background: rgba(64, 158, 255, 0.04);
   }
 
   &.is-selected {
-    border-color: rgba(64, 158, 255, 0.3);
-    background: rgba(64, 158, 255, 0.05);
+    border-color: rgba(64, 158, 255, 0.35);
+    background: rgba(64, 158, 255, 0.07);
   }
 
   &__checkbox {
+    align-self: flex-start;
     padding-top: 2px;
   }
 
   &__body {
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
     min-width: 0;
   }
 
   &__content {
-    margin: 0 0 10px;
+    margin: 0;
     font-size: 14px;
-    color: rgba(241, 242, 246, 0.85);
-    line-height: 1.7;
+    color: rgba(241, 242, 246, 0.9);
+    line-height: 1.8;
     white-space: pre-wrap;
   }
 
   &__meta {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   }
 
   &__date {
@@ -358,8 +365,24 @@ onMounted(() => {
   &__ops {
     display: flex;
     align-items: center;
-    gap: 4px;
-    flex-shrink: 0;
+    gap: 6px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 768px) {
+    & {
+      padding: 16px;
+    }
+
+    &__date {
+      margin-left: 0;
+    }
+
+    &__ops {
+      justify-content: flex-start;
+      width: 100%;
+    }
   }
 }
 </style>

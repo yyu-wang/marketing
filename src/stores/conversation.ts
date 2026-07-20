@@ -256,6 +256,12 @@ export const useConversationStore = defineStore('conversation', {
       return this.current?.messages.find((m) => m.id === id)
     },
 
+    async reloadCurrent() {
+      if (!this.current) return
+      const { page, pageSize } = this.current
+      this.current = await getConversation(this.current.id, { page, pageSize })
+    },
+
     async renameCurrent(title: string) {
       if (!this.current) return
       const updated = await renameConversation(this.current.id, title)

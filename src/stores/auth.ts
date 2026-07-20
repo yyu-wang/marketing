@@ -33,7 +33,7 @@ export const useAuthStore = defineStore('auth', {
     },
     applyAuthResult(result: AuthResult) {
       this.token = result.token
-      this.user = { userId: result.userId, email: result.email, role: result.role }
+      this.user = { userId: result.userId, email: result.email, role: result.role, nickname: result.nickname }
       setToken(result.token)
       setStoredUser(this.user)
     },
@@ -44,6 +44,13 @@ export const useAuthStore = defineStore('auth', {
     async register(payload: RegisterPayload): Promise<void> {
       const result = await authApi.register(payload)
       this.applyAuthResult(result)
+    },
+    async updateProfile(nickname: string): Promise<void> {
+      await authApi.updateProfile(nickname)
+      if (this.user) {
+        this.user = { ...this.user, nickname }
+        setStoredUser(this.user)
+      }
     },
     clearSession() {
       this.token = null

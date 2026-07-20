@@ -6,6 +6,7 @@ export interface LoginPayload {
 }
 
 export interface RegisterPayload {
+  nickname: string
   email: string
   password: string
   /** 哈希版本：1 = SHA-256 */
@@ -17,10 +18,12 @@ export interface AuthResult {
   userId: number
   email: string
   role: string
+  nickname: string
 }
 
 export interface AuthUser {
   userId: number
   email: string
   role: string
+  nickname: string
 }

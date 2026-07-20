@@ -6,3 +6,6 @@ export const login = (payload: LoginPayload) =>
 
 export const register = (payload: RegisterPayload) =>
   http.post<AuthResult>('/auth/register', payload)
+
+export const updateProfile = (nickname: string) =>
+  http.patch<{ nickname: string }>('/auth/profile', { nickname })

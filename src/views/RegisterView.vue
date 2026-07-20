@@ -13,6 +13,9 @@
         size="large"
         @submit.prevent="onSubmit(formRef)"
       >
+        <el-form-item label="昵称" prop="nickname">
+          <el-input v-model="form.nickname" placeholder="请输入昵称（最多20字符）" maxlength="20" autocomplete="nickname" />
+        </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="form.email" placeholder="请输入邮箱" autocomplete="username" />
         </el-form-item>
@@ -67,12 +70,17 @@ const formRef = ref<FormInstance | null>(null)
 const loading = ref(false)
 
 const form = reactive({
+  nickname: '',
   email: '',
   password: '',
   confirm: '',
 })
 
 const rules: FormRules = {
+  nickname: [
+    { required: true, message: '请输入昵称', trigger: 'blur' },
+    { max: 20, message: '昵称最多20个字符', trigger: 'blur' },
+  ],
   email: EMAIL_RULES,
   password: [...PASSWORD_BASE_RULES, passwordPatternRule],
   confirm: [
@@ -94,11 +102,12 @@ const onSubmit = async (instance: FormInstance | null) => {
     loading.value = true
     try {
       const hashedPassword = await sha256(form.password)
-      await auth.register({ email: form.email.trim(), password: hashedPassword, hashVersion: 1 })
+      await auth.register({ nickname: form.nickname.trim(), email: form.email.trim(), password: hashedPassword, hashVersion: 1 })
       ElMessage.success('注册成功')
       await router.replace('/')
-    } catch {
-      /* 拦截器提示 */
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '注册失败，请稍后重试'
+      ElMessage.error(message)
     } finally {
       loading.value = false
     }

@@ -35,7 +35,7 @@ export const editMessage = (conversationId: number, messageId: number, content: 
   )
 
 export const getMessageVersions = (conversationId: number, messageId: number) =>
-  http.get<Array<{ id: number; version: number; content: string; createdAt: string }>>(
+  http.get<Array<{ id: number; version: number; content: string; userContent: string | null; createdAt: string }>>(
     `/conversations/${conversationId}/messages/${messageId}/versions`,
   )
 
@@ -44,6 +44,6 @@ export const restoreMessageVersion = (
   messageId: number,
   versionId: number,
 ) =>
-  http.patch<{ content: string }>(
+  http.patch<{ content: string; userContent?: string }>(
     `/conversations/${conversationId}/messages/${messageId}/versions/${versionId}/restore`,
   )

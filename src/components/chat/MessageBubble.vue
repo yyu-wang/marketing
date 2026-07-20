@@ -124,30 +124,15 @@
             <span class="action-btn__text">保存</span>
           </el-button>
           <!-- 版本历史 -->
-          <el-dropdown
+          <el-button
             v-if="message.role === 'assistant' && message.status === 'done'"
-            trigger="click"
-            @command="(versionId: number) => handleRestoreVersion(versionId)"
-            @visible-change="onVersionDropdownVisible"
+            class="action-btn"
+            size="small"
+            @click="versionDialogVisible = true"
           >
-            <el-button class="action-btn" size="small">
-              <el-icon><Clock /></el-icon>
-              <span class="action-btn__text">版本</span>
-            </el-button>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item v-if="versions.length === 0" disabled>暂无历史版本</el-dropdown-item>
-                <el-dropdown-item
-                  v-for="v in versions"
-                  :key="v.id"
-                  :command="v.id"
-                >
-                  <span>版本 {{ v.version }}</span>
-                  <span class="version-date">{{ formatDate(v.createdAt) }}</span>
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
+            <el-icon><Clock /></el-icon>
+            <span class="action-btn__text">版本</span>
+          </el-button>
         </div>
       </div>
     </template>
@@ -178,19 +163,26 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <VersionHistoryDialog
+      v-if="versionDialogVisible"
+      v-model="versionDialogVisible"
+      :conversation-id="Number(store.currentId!)"
+      :message-id="Number(message.id)"
+      :user-message-id="Number(prevUserMessageId)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Clock, Edit, FolderAdd, Loading, RefreshRight, WarningFilled } from '@element-plus/icons-vue'
 import CopyButton from '@/components/common/CopyButton.vue'
-import { getMessageVersions, restoreMessageVersion } from '@/api/conversation'
+import VersionHistoryDialog from '@/components/chat/VersionHistoryDialog.vue'
 import { saveMessageToProject } from '@/api/copy'
 import { getProjectList } from '@/api/project'
 import { useConversationStore } from '@/stores/conversation'
-import { formatDate } from '@/utils/format'
 import type { Message } from '@/types/conversation'
 
 const props = defineProps<{
@@ -200,6 +192,17 @@ const props = defineProps<{
 }>()
 
 const store = useConversationStore()
+
+// 找到当前 assistant 消息之前的用户消息 ID
+const prevUserMessageId = computed(() => {
+  const msgs = store.messages
+  const idx = msgs.findIndex((m) => m.id === props.message.id)
+  for (let i = idx - 1; i >= 0; i--) {
+    if (msgs[i].role === 'user') return msgs[i].id
+  }
+  return 0
+})
+
 const isEditing = ref(false)
 const editText = ref('')
 const editLoading = ref(false)
@@ -234,38 +237,8 @@ const confirmEdit = async () => {
   }
 }
 
-// 版本管理
-interface MessageVersion {
-  id: number
-  version: number
-  content: string
-  createdAt: string
-}
-const versions = ref<MessageVersion[]>([])
-
-const onVersionDropdownVisible = async (visible: boolean) => {
-  if (!visible) return
-  if (!store.current) return
-  try {
-    versions.value = await getMessageVersions(store.current.id, props.message.id)
-  } catch {
-    /* ignore */
-  }
-}
-
-const handleRestoreVersion = async (versionId: number) => {
-  if (!store.current) return
-  try {
-    const result = await restoreMessageVersion(store.current.id, props.message.id, versionId)
-    const msg = store.findMessage(props.message.id)
-    if (msg) {
-      msg.content = result.content
-    }
-    ElMessage.success('已恢复到选中版本')
-  } catch {
-    /* ignore */
-  }
-}
+// 版本历史对话框
+const versionDialogVisible = ref(false)
 
 // 保存到项目
 const saveDialogVisible = ref(false)
