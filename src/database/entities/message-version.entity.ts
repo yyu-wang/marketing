@@ -24,6 +24,10 @@ export class MessageVersionEntity {
   @Column({ type: 'text', name: 'content', nullable: true })
   content: string | null;
 
+  /** 编辑场景下配对的用户提问内容，仅 retry 场景为 null */
+  @Column({ type: 'text', name: 'user_content', nullable: true })
+  userContent: string | null;
+
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   createdAt: Date;
 

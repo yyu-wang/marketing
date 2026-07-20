@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
   IsInt,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
@@ -27,6 +28,16 @@ export class RegisterDto {
   @IsInt({ message: 'hashVersion 必须为整数' })
   @Min(0, { message: 'hashVersion 不可为负数' })
   hashVersion?: number;
+
+  @ApiProperty({
+    description: '用户昵称，最长 20 字符',
+    example: '小明',
+    maxLength: 20,
+  })
+  @IsString({ message: '昵称必须为字符串' })
+  @IsNotEmpty({ message: '昵称不能为空' })
+  @MaxLength(20, { message: '昵称长度不可超过 20 字符' })
+  nickname: string;
 
   @ApiProperty({
     description: '注册邮箱，全局唯一',
@@ -84,4 +95,15 @@ export class LoginDto {
   @IsString({ message: '密码必须为字符串' })
   @MinLength(1, { message: '请输入密码' })
   password: string;
+}
+
+/**
+ * 更新个人资料 DTO
+ */
+export class UpdateProfileDto {
+  @ApiProperty({ description: '用户昵称', maxLength: 20 })
+  @IsString({ message: '昵称必须为字符串' })
+  @IsNotEmpty({ message: '昵称不能为空' })
+  @MaxLength(20, { message: '昵称长度不可超过 20 字符' })
+  nickname: string;
 }

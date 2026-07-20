@@ -119,13 +119,13 @@ export class ConversationsController {
   }
 
   @Patch(':conversationId/messages/:messageId/versions/:versionId/restore')
-  @ApiOperation({ summary: '恢复到指定的历史版本' })
+  @ApiOperation({ summary: '恢复到指定的历史版本（同时恢复配对的用户提问）' })
   restoreMessageVersion(
     @CurrentUser() user: JwtPayload,
     @Param('conversationId', ParseIntPipe) conversationId: number,
     @Param('messageId', ParseIntPipe) messageId: number,
     @Param('versionId', ParseIntPipe) versionId: number,
-  ) {
+  ): Promise<{ content: string; userContent?: string }> {
     return this.service.restoreMessageVersion(user.sub, conversationId, messageId, versionId);
   }
 }

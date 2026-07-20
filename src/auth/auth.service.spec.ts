@@ -54,7 +54,7 @@ describe('AuthService', () => {
     it('邮箱重复时应抛出 ConflictException', async () => {
       userRepo.findOne.mockResolvedValueOnce({ id: 1 });
       await expect(
-        service.register({ email: 'a@b.com', password: 'abc12345' }),
+        service.register({ nickname: 'test', email: 'a@b.com', password: 'abc12345' }),
       ).rejects.toBeInstanceOf(ConflictException);
     });
 
@@ -66,6 +66,7 @@ describe('AuthService', () => {
       }));
 
       const result = await service.register({
+        nickname: 'test',
         email: 'a@b.com',
         password: 'abc12345',
       });
@@ -130,6 +131,7 @@ describe('AuthService', () => {
       const user = {
         id: 1,
         email: 'a@b.com',
+        nickname: 'test',
         createdAt: new Date('2024-01-01T00:00:00.000Z'),
         updatedAt: new Date('2024-01-02T00:00:00.000Z'),
       };
@@ -138,7 +140,7 @@ describe('AuthService', () => {
       await expect(service.findUserById(1)).resolves.toEqual(user);
       expect(userRepo.findOne).toHaveBeenCalledWith({
         where: { id: 1 },
-        select: ['id', 'email', 'createdAt', 'updatedAt'],
+        select: ['id', 'email', 'nickname', 'createdAt', 'updatedAt'],
       });
     });
   });

@@ -29,6 +29,10 @@ export class UserEntity {
   @Column({ type: 'varchar', length: 255, name: 'email', nullable: false })
   email: string;
 
+  /** 用户昵称，注册时必填，最长 20 字符 */
+  @Column({ type: 'varchar', length: 20, name: 'nickname', nullable: false, default: '' })
+  nickname: string;
+
   /** bcrypt 哈希值，禁止明文存储 */
   @Column({ type: 'varchar', length: 255, name: 'password_hash', nullable: false })
   passwordHash: string;

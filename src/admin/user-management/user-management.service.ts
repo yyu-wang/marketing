@@ -29,7 +29,7 @@ export class UserManagementService {
 
     const [list, total] = await this.userRepo.findAndCount({
       where,
-      select: ['id', 'email', 'role', 'isActive', 'createdAt', 'updatedAt'],
+      select: ['id', 'email', 'nickname', 'role', 'isActive', 'createdAt', 'updatedAt'],
       skip: (page - 1) * pageSize,
       take: pageSize,
       order: { id: 'DESC' },
@@ -45,12 +45,13 @@ export class UserManagementService {
     const passwordHash = await hash(dto.password, this.BCRYPT_COST);
     const user = this.userRepo.create({
       email: dto.email,
+      nickname: dto.nickname || '',
       passwordHash,
       role: dto.role || 'user',
     });
     await this.userRepo.save(user);
 
-    return { id: user.id, email: user.email, role: user.role };
+    return { id: user.id, email: user.email, nickname: user.nickname, role: user.role };
   }
 
   async update(id: number, dto: UpdateUserDto, currentUserId: number) {
@@ -64,11 +65,12 @@ export class UserManagementService {
       throw new ForbiddenException('不能停用自己的账户');
     }
 
+    if (dto.nickname !== undefined) user.nickname = dto.nickname;
     if (dto.role !== undefined) user.role = dto.role;
     if (dto.isActive !== undefined) user.isActive = dto.isActive;
 
     await this.userRepo.save(user);
-    return { id: user.id, email: user.email, role: user.role, isActive: user.isActive };
+    return { id: user.id, email: user.email, nickname: user.nickname, role: user.role, isActive: user.isActive };
   }
 
   async resetPassword(id: number, dto: ResetPasswordDto) {

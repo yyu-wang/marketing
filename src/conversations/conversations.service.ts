@@ -272,31 +272,52 @@ export class ConversationsService {
     if (!message) throw new NotFoundException('消息不存在');
     if (message.role !== 'user') throw new BadRequestException('仅允许编辑用户消息');
 
+    const oldUserContent = message.content;
+
     // 更新消息内容
     message.content = content;
     await this.messageRepo.save(message);
 
-    // 删除该消息之后的所有消息
+    // 查找该消息之后的所有消息
     const laterMessages = await this.messageRepo.find({
       where: { conversationId: conv.id },
-      select: ['id'],
+      order: { id: 'ASC' },
     });
-    const idsToDelete = laterMessages
-      .filter((m) => Number(m.id) > Number(messageId))
-      .map((m) => m.id);
-    if (idsToDelete.length > 0) {
-      await this.messageRepo.delete(idsToDelete);
-    }
+    const later = laterMessages.filter((m) => Number(m.id) > Number(messageId));
 
-    // 创建新的 assistant 占位消息
-    const assistantMsg = await this.messageRepo.save(
-      this.messageRepo.create({
-        conversationId: conv.id,
-        role: 'assistant',
-        content: null,
-        status: 'pending',
-      }),
-    );
+    // 找到第一个 assistant 消息，保存交换版本后复用
+    const firstAssistant = later.find((m) => m.role === 'assistant');
+    let assistantMsg: MessageEntity;
+
+    if (firstAssistant) {
+      // 将旧的提问+回答作为一个交换版本保存到 assistant 消息上
+      await this.saveMessageVersion(firstAssistant.id, firstAssistant.content, oldUserContent);
+      firstAssistant.content = null;
+      firstAssistant.status = 'pending';
+      assistantMsg = await this.messageRepo.save(firstAssistant);
+
+      // 删除除复用 assistant 之外的其他后续消息
+      const idsToDelete = later
+        .filter((m) => m.id !== firstAssistant.id)
+        .map((m) => m.id);
+      if (idsToDelete.length > 0) {
+        await this.messageRepo.delete(idsToDelete);
+      }
+    } else {
+      // 没有后续 assistant 消息，清理后续消息并创建新占位
+      const idsToDelete = later.map((m) => m.id);
+      if (idsToDelete.length > 0) {
+        await this.messageRepo.delete(idsToDelete);
+      }
+      assistantMsg = await this.messageRepo.save(
+        this.messageRepo.create({
+          conversationId: conv.id,
+          role: 'assistant',
+          content: null,
+          status: 'pending',
+        }),
+      );
+    }
 
     conv.updatedAt = new Date();
     await this.conversationRepo.save(conv);
@@ -313,8 +334,12 @@ export class ConversationsService {
   // 版本管理
   // ---------------------------------------------------------------
 
-  /** 保存 assistant 消息的旧版本 */
-  async saveMessageVersion(messageId: number, content: string | null): Promise<void> {
+  /** 保存消息的旧版本，可附带配对的用户提问内容 */
+  async saveMessageVersion(
+    messageId: number,
+    content: string | null,
+    userContent?: string | null,
+  ): Promise<void> {
     if (!content) return;
 
     const maxResult = await this.versionRepo.findOne({
@@ -325,7 +350,7 @@ export class ConversationsService {
     const nextVersion = (maxResult?.version ?? 0) + 1;
 
     await this.versionRepo.save(
-      this.versionRepo.create({ messageId, version: nextVersion, content }),
+      this.versionRepo.create({ messageId, version: nextVersion, content, userContent }),
     );
   }
 
@@ -334,17 +359,17 @@ export class ConversationsService {
     return this.versionRepo.find({
       where: { messageId },
       order: { version: 'DESC' },
-      select: ['id', 'messageId', 'version', 'content', 'createdAt'],
+      select: ['id', 'messageId', 'version', 'content', 'userContent', 'createdAt'],
     });
   }
 
-  /** 恢复到指定版本 */
+  /** 恢复到指定版本，同时恢复配对的用户提问（如有） */
   async restoreMessageVersion(
     userId: number,
     conversationId: number,
     messageId: number,
     versionId: number,
-  ): Promise<{ content: string }> {
+  ): Promise<{ content: string; userContent?: string }> {
     await this.findOwned(userId, conversationId);
 
     const version = await this.versionRepo.findOne({ where: { id: versionId, messageId } });
@@ -356,7 +381,27 @@ export class ConversationsService {
     message.content = version.content;
     await this.messageRepo.save(message);
 
-    return { content: version.content ?? '' };
+    // 如果有配对的用户提问，同时恢复用户消息
+    if (version.userContent) {
+      const allMsgs = await this.messageRepo.find({
+        where: { conversationId },
+        select: ['id', 'role'],
+        order: { id: 'ASC' },
+      });
+      // 找到该 assistant 消息之前最近的 user 消息
+      const prevUser = allMsgs
+        .reverse()
+        .find((m) => m.role === 'user' && Number(m.id) < Number(messageId));
+      if (prevUser) {
+        const userMsg = await this.messageRepo.findOne({ where: { id: prevUser.id } });
+        if (userMsg) {
+          userMsg.content = version.userContent;
+          await this.messageRepo.save(userMsg);
+        }
+      }
+    }
+
+    return { content: version.content ?? '', userContent: version.userContent ?? undefined };
   }
 
   // ---------------------------------------------------------------

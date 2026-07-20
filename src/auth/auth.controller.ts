@@ -1,8 +1,9 @@
-import { Body, Controller, Get, HttpCode, HttpStatus, Param, Post } from '@nestjs/common';
-import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { AuthService } from './auth.service';
-import { LoginDto, RegisterDto } from './dto/auth.dto';
+import { LoginDto, RegisterDto, UpdateProfileDto } from './dto/auth.dto';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -29,6 +30,13 @@ export class AuthController {
   })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
+  }
+
+  @Patch('profile')
+  @ApiBearerAuth('JWT')
+  @ApiOperation({ summary: '更新当前用户个人资料（昵称）' })
+  updateProfile(@CurrentUser('sub') userId: number, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(userId, dto.nickname);
   }
 
   @Get('user/:id')

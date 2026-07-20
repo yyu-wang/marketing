@@ -11,11 +11,13 @@ export class CosService implements OnModuleInit {
   private bucket: string;
   private region: string;
   private cdnDomain: string;
+  private useAccelerate: boolean;
 
   constructor(private readonly config: ConfigService) {
     this.bucket = config.get<string>('COS_BUCKET', '');
     this.region = config.get<string>('COS_REGION', 'ap-guangzhou');
     this.cdnDomain = config.get<string>('COS_CDN_DOMAIN', '');
+    this.useAccelerate = config.get<string>('COS_USE_ACCELERATE', 'false') === 'true';
   }
 
   async onModuleInit() {
@@ -86,7 +88,10 @@ export class CosService implements OnModuleInit {
       const base = this.cdnDomain.replace(/\/$/, '');
       return `${base}/${key}`;
     }
-    return `https://${this.bucket}.cos.${this.region}.myqcloud.com/${key}`;
+    if (this.useAccelerate) {
+      return `https://${this.bucket}.cos.accelerate.myqcloud.com/${key}`;
+    }
+    return `https://${this.bucket}.cos.${this.region}.tencentcos.cn/${key}`;
   }
 
   async delete(key: string): Promise<void> {

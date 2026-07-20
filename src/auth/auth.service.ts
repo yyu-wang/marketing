@@ -44,23 +44,22 @@ export class AuthService {
    *   2. 密码 bcrypt 加密存储；
    *   3. 生成 JWT 并返回（自动登录体验）。
    */
-  async register(dto: RegisterDto): Promise<{ token: string; userId: number; email: string; role: string }> {
+  async register(dto: RegisterDto): Promise<{ token: string; userId: number; email: string; role: string; nickname: string }> {
     const exists = await this.userRepo.findOne({
       where: { email: dto.email },
       select: ['id'],
     });
     if (exists) {
-      // 重复邮箱：明确返回 409，便于前端实时提示
       throw new ConflictException('该邮箱已被注册');
     }
 
     const passwordHash = await hash(dto.password, this.BCRYPT_COST);
     const user = await this.userRepo.save(
-      this.userRepo.create({ email: dto.email, passwordHash, passwordVersion: 1 }),
+      this.userRepo.create({ email: dto.email, nickname: dto.nickname, passwordHash, passwordVersion: 1 }),
     );
 
     const token = await this.signToken(user.id, user.email, user.role);
-    return { token, userId: user.id, email: user.email, role: user.role };
+    return { token, userId: user.id, email: user.email, role: user.role, nickname: user.nickname };
   }
 
   /**
@@ -78,7 +77,7 @@ export class AuthService {
    *
    * 异常处理：账户不存在 / 密码错误均返回 401，避免存在性泄漏。
    */
-  async login(dto: LoginDto): Promise<{ token: string; userId: number; email: string; role: string }> {
+  async login(dto: LoginDto): Promise<{ token: string; userId: number; email: string; role: string; nickname: string }> {
     const user = await this.userRepo.findOne({
       where: { email: dto.email },
     });
@@ -118,7 +117,20 @@ export class AuthService {
     }
 
     const token = await this.signToken(user.id, user.email, user.role);
-    return { token, userId: user.id, email: user.email, role: user.role };
+    return { token, userId: user.id, email: user.email, role: user.role, nickname: user.nickname };
+  }
+
+  /**
+   * 更新当前用户个人资料（昵称）
+   */
+  async updateProfile(userId: number, nickname: string): Promise<{ nickname: string }> {
+    const user = await this.userRepo.findOne({ where: { id: userId }, select: ['id', 'nickname'] });
+    if (!user) {
+      throw new UnauthorizedException('用户不存在');
+    }
+    user.nickname = nickname;
+    await this.userRepo.save(user);
+    return { nickname: user.nickname };
   }
 
   /**
@@ -131,7 +143,7 @@ export class AuthService {
   async findUserById(userId: number): Promise<Partial<UserEntity> | null> {
     const user = await this.userRepo.findOne({
       where: { id: userId },
-      select: ['id', 'email', 'createdAt', 'updatedAt'],
+      select: ['id', 'email', 'nickname', 'createdAt', 'updatedAt'],
     });
 
     this.logger.debug(`[findUserById] userId=${userId} found=${!!user}`);
