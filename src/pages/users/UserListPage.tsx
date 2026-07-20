@@ -49,7 +49,7 @@ export const UserListPage = () => {
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
-    form.setFieldsValue({ role: user.role, isActive: user.isActive });
+    form.setFieldsValue({ nickname: user.nickname, role: user.role, isActive: user.isActive });
     setModalOpen(true);
   };
 
@@ -57,11 +57,11 @@ export const UserListPage = () => {
     try {
       const values = await form.validateFields();
       if (editingUser) {
-        const payload: UpdateUserPayload = { role: values.role, isActive: values.isActive };
+        const payload: UpdateUserPayload = { nickname: values.nickname, role: values.role, isActive: values.isActive };
         await updateUser(editingUser.id, payload);
         message.success('更新成功');
       } else {
-        const payload: CreateUserPayload = { email: values.email, password: values.password, role: values.role };
+        const payload: CreateUserPayload = { email: values.email, password: values.password, nickname: values.nickname, role: values.role };
         await createUser(payload);
         message.success('创建成功');
       }
@@ -104,6 +104,7 @@ export const UserListPage = () => {
 
   const columns: ColumnsType<User> = [
     { title: 'ID', dataIndex: 'id', width: 80 },
+    { title: '昵称', dataIndex: 'nickname', width: 140 },
     { title: '邮箱', dataIndex: 'email' },
     {
       title: '角色', dataIndex: 'role', width: 100,
@@ -176,6 +177,9 @@ export const UserListPage = () => {
         destroyOnHidden
       >
         <Form form={form} layout="vertical">
+          <Form.Item name="nickname" label="昵称" rules={[{ max: 20, message: '昵称最多20个字符' }]}>
+            <Input maxLength={20} placeholder="请输入昵称" />
+          </Form.Item>
           {!editingUser && (
             <>
               <Form.Item name="email" label="邮箱" rules={[{ required: true, type: 'email', message: '请输入有效邮箱' }]}>
