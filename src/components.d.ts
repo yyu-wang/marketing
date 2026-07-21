@@ -40,6 +40,7 @@ declare module 'vue' {
     ElTooltip: typeof import('element-plus/es')['ElTooltip']
     MessageBubble: typeof import('./components/chat/MessageBubble.vue')['default']
     MessageList: typeof import('./components/chat/MessageList.vue')['default']
+    MobileTabBar: typeof import('./components/layout/MobileTabBar.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     UserMenu: typeof import('./components/layout/UserMenu.vue')['default']

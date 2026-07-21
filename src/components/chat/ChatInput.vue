@@ -271,11 +271,22 @@ onMounted(() => {
   backdrop-filter: blur(20px);
   box-shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
 
+  @media (max-width: 767px) {
+    max-width: none;
+    border-radius: 16px;
+    padding: 10px 12px 12px;
+  }
+
   &__options {
     display: flex;
     align-items: center;
     justify-content: space-between;
     margin-bottom: 10px;
+
+    @media (max-width: 767px) {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   }
 
   &__advanced-toggle {
@@ -290,6 +301,11 @@ onMounted(() => {
     padding: 8px 12px;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 10px;
+
+    @media (max-width: 767px) {
+      flex-direction: column;
+      gap: 8px;
+    }
   }
 
   &__advanced-item {
@@ -408,6 +424,13 @@ onMounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
+
+    @media (max-width: 767px) {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      font-size: 11px;
+    }
   }
 
   &__quota {

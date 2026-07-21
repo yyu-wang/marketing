@@ -182,3 +182,33 @@ html.dark {
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
+// =============================================================================
+// 移动端全局适配
+// =============================================================================
+
+// 防止 iOS 触摸时的高亮
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+// 触屏设备禁用 sticky hover 效果
+@media (hover: none) {
+  *:hover {
+    // 重置可能导致 sticky hover 的属性（由各组件自行覆盖）
+  }
+}
+
+// 移动端隐藏自定义滚动条
+@media (max-width: 767px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  // 输入框防 iOS 自动缩放
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}

@@ -229,14 +229,15 @@ async function onAction(cmd: string, item: ConversationSummary) {
     align-items: center;
     justify-content: space-between;
     gap: 6px;
-    padding: 8px 10px;
+    padding: 10px 12px;
     border-radius: 10px;
     cursor: pointer;
     color: $text-secondary;
     font-size: 13px;
     transition: background 0.15s ease;
     content-visibility: auto;
-    contain-intrinsic-size: 0 36px;
+    contain-intrinsic-size: 0 44px;
+    min-height: 44px;
 
     &:hover {
       background: $bg-card-hover;

@@ -80,12 +80,14 @@ async function onSubmit(payload: { text?: string; imageUrls?: string[] }) {
   height: 100%;
 
   &__sidebar {
-    @media (max-width: 768px) {
+    @media (max-width: 767px) {
       position: fixed;
       top: 0;
       left: 0;
       bottom: 0;
       z-index: 100;
+      width: 85vw;
+      max-width: 300px;
       transform: translateX(-100%);
       transition: transform 0.25s ease;
 
@@ -98,7 +100,7 @@ async function onSubmit(payload: { text?: string; imageUrls?: string[] }) {
   &__overlay {
     display: none;
 
-    @media (max-width: 768px) {
+    @media (max-width: 767px) {
       display: block;
       position: fixed;
       inset: 0;
@@ -118,7 +120,7 @@ async function onSubmit(payload: { text?: string; imageUrls?: string[] }) {
   &__menu-btn {
     display: none;
 
-    @media (max-width: 768px) {
+    @media (max-width: 767px) {
       display: inline-flex;
       margin-right: 8px;
     }
@@ -134,7 +136,7 @@ async function onSubmit(payload: { text?: string; imageUrls?: string[] }) {
     background: rgba(7, 7, 13, 0.4);
     backdrop-filter: blur(12px);
 
-    @media (max-width: 768px) {
+    @media (max-width: 767px) {
       padding: 0 16px;
     }
   }
@@ -152,7 +154,7 @@ async function onSubmit(payload: { text?: string; imageUrls?: string[] }) {
   &__input-wrap {
     padding: 12px 24px 22px;
 
-    @media (max-width: 768px) {
+    @media (max-width: 767px) {
       padding: 8px 12px 16px;
     }
   }

@@ -8,6 +8,7 @@
     <div class="app-shell__content">
       <RouterView />
     </div>
+    <MobileTabBar v-if="isMobile" />
   </div>
 </template>
 
@@ -15,6 +16,10 @@
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { RouterView } from 'vue-router'
 import { WarningFilled } from '@element-plus/icons-vue'
+import MobileTabBar from '@/components/layout/MobileTabBar.vue'
+import { useDevice } from '@/composables/useDevice'
+
+const { isMobile } = useDevice()
 
 const isOffline = ref(!navigator.onLine)
 
@@ -67,8 +72,11 @@ onBeforeUnmount(() => {
     flex: 1;
     min-height: 0;
     min-width: 0;
-    height: 100%;
     width: 100%;
+
+    @media (max-width: 767px) {
+      overflow: hidden;
+    }
   }
 }
 </style>

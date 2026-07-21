@@ -325,6 +325,10 @@ const handleSaveToProject = async () => {
     background: rgba(124, 92, 255, 0.15);
     border-color: rgba(124, 92, 255, 0.3);
     max-width: 66.67%;
+
+    @media (max-width: 767px) {
+      max-width: 85%;
+    }
   }
 
   &__card--assistant {

@@ -1,6 +1,21 @@
 <template>
   <div class="admin-shell">
-    <aside class="admin-sidebar">
+    <!-- 移动端：顶部导航栏 -->
+    <header v-if="isMobile" class="admin-mobile-header">
+      <el-button text :icon="Expand" @click="sidebarOpen = true" />
+      <span class="admin-mobile-header__title">CopyWise 管理</span>
+      <el-button text :icon="Back" @click="$router.push('/')" />
+    </header>
+
+    <!-- 侧边栏：PC 常驻 → 移动端 overlay drawer -->
+    <Teleport to="body" v-if="isMobile && sidebarOpen">
+      <div class="admin-sidebar-overlay" @click="sidebarOpen = false" />
+    </Teleport>
+
+    <aside
+      class="admin-sidebar"
+      :class="{ 'admin-sidebar--open': isMobile && sidebarOpen }"
+    >
       <div class="admin-sidebar__brand" @click="$router.push('/')">
         <span class="admin-sidebar__logo">CW</span>
         <span class="admin-sidebar__title">CopyWise 管理</span>
@@ -12,6 +27,7 @@
         background-color="transparent"
         text-color="rgba(241,242,246,0.72)"
         active-text-color="#ffffff"
+        @select="closeSidebar"
       >
         <el-menu-item :index="ROUTE_PATH.ADMIN_USERS">
           <el-icon><User /></el-icon>
@@ -33,6 +49,7 @@
         </el-button>
       </div>
     </aside>
+
     <main class="admin-main">
       <RouterView />
     </main>
@@ -40,13 +57,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { RouterView } from 'vue-router'
-import { User, Document, Back, Warning } from '@element-plus/icons-vue'
+import { User, Document, Back, Expand, Warning } from '@element-plus/icons-vue'
 import { ROUTE_PATH } from '@/router/routes'
+import { useDevice } from '@/composables/useDevice'
 
 const route = useRoute()
 const activeMenu = computed(() => route.path)
+const sidebarOpen = ref(false)
+
+const { isMobile } = useDevice()
+
+const closeSidebar = () => {
+  sidebarOpen.value = false
+}
 </script>
 
 <style scoped lang="scss">
@@ -54,6 +79,36 @@ const activeMenu = computed(() => route.path)
   display: flex;
   height: 100vh;
   background: #0a0a0f;
+}
+
+// 移动端顶部导航
+.admin-mobile-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 8px;
+  background: rgba(10, 10, 20, 0.94);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+
+  &__title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #f1f2f6;
+  }
+}
+
+.admin-sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(0, 0, 0, 0.45);
 }
 
 .admin-sidebar {
@@ -64,6 +119,20 @@ const activeMenu = computed(() => route.path)
   background: rgba(10, 10, 20, 0.92);
   backdrop-filter: blur(12px);
   flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+
+    &--open {
+      transform: translateX(0);
+    }
+  }
 
   &__brand {
     display: flex;
@@ -137,5 +206,10 @@ const activeMenu = computed(() => route.path)
   overflow: auto;
   padding: 24px;
   min-width: 0;
+
+  @media (max-width: 767px) {
+    padding: 16px;
+    margin-top: 48px;
+  }
 }
 </style>

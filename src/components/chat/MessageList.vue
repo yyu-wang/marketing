@@ -98,6 +98,10 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
 
+  @media (max-width: 767px) {
+    padding: 16px 12px 12px;
+  }
+
   &__inner {
     width: 100%;
     max-width: 1000px;
@@ -105,6 +109,10 @@ onBeforeUnmount(() => {
     display: flex;
     flex-direction: column;
     gap: 18px;
+
+    @media (max-width: 767px) {
+      gap: 14px;
+    }
   }
 
   &__empty {
@@ -135,6 +143,10 @@ onBeforeUnmount(() => {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+
+    @media (max-width: 767px) {
+      font-size: 22px;
+    }
   }
 
   &__hero-sub {

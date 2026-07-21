@@ -181,12 +181,22 @@ onMounted(() => {
   padding: 40px 32px;
   box-sizing: border-box;
   min-width: 0;
+  flex: 1;
+  overflow-y: auto;
+
+  @media (max-width: 767px) {
+    padding: 16px;
+  }
 
   &__header {
     display: flex;
     align-items: center;
     gap: 16px;
     margin-bottom: 32px;
+
+    @media (max-width: 767px) {
+      margin-bottom: 20px;
+    }
   }
 
   &__back {
@@ -253,6 +263,10 @@ onMounted(() => {
     font-weight: 700;
     color: #409eff;
     margin-bottom: 12px;
+
+    @media (max-width: 767px) {
+      font-size: 28px;
+    }
   }
 
   &__label {
@@ -283,10 +297,18 @@ onMounted(() => {
     @media (max-width: 1024px) {
       height: 320px;
     }
+
+    @media (max-width: 767px) {
+      height: 240px;
+    }
   }
 
   &--starred {
     margin-bottom: 32px;
+
+    @media (max-width: 767px) {
+      overflow-x: auto;
+    }
   }
 }
 
@@ -295,6 +317,10 @@ onMounted(() => {
 
   :deep(.el-table__header th) {
     background: rgba(255, 255, 255, 0.04);
+  }
+
+  @media (max-width: 767px) {
+    min-width: 420px;
   }
 }
 </style>

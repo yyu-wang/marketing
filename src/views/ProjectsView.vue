@@ -208,6 +208,12 @@ onMounted(() => {
   margin: 0 auto;
   padding: 40px 32px;
   box-sizing: border-box;
+  flex: 1;
+  overflow-y: auto;
+
+  @media (max-width: 767px) {
+    padding: 16px;
+  }
 
   &__header {
     display: flex;
@@ -215,6 +221,11 @@ onMounted(() => {
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 32px;
+
+    @media (max-width: 767px) {
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
   }
 
   &__header-left {
@@ -257,7 +268,7 @@ onMounted(() => {
   gap: 24px;
   min-height: 120px;
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     grid-template-columns: 1fr;
   }
 }

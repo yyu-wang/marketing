@@ -9,6 +9,7 @@ import App from './App.vue'
 import router from './router'
 import { useAuthStore } from './stores/auth'
 import './styles/index.scss'
+import './styles/element-overrides.scss'
 
 // 全局启用 dark token（Element Plus dark css-vars 通过 html.dark 触发）
 document.documentElement.classList.add('dark')

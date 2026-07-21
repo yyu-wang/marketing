@@ -253,6 +253,18 @@ onMounted(() => {
 
 <style scoped lang="scss">
 .project-detail {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 40px 32px;
+  box-sizing: border-box;
+  flex: 1;
+  overflow-y: auto;
+
+  @media (max-width: 767px) {
+    padding: 16px;
+  }
+
   &__info {
     display: flex;
     align-items: flex-start;
@@ -263,6 +275,10 @@ onMounted(() => {
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
     margin-bottom: 20px;
+
+    @media (max-width: 767px) {
+      flex-direction: column;
+    }
   }
 
   &__info-left {
@@ -306,6 +322,10 @@ onMounted(() => {
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 16px;
     min-height: 120px;
+
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+    }
   }
 }
 
@@ -370,7 +390,7 @@ onMounted(() => {
     flex-wrap: wrap;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 767px) {
     & {
       padding: 16px;
     }
