@@ -13,15 +13,6 @@
         <div class="chat-view__title">
           {{ store.current?.title ?? '新对话' }}
         </div>
-        <el-button
-          v-if="store.current && store.messages.length > 0"
-          size="small"
-          text
-          :icon="Download"
-          @click="handleExport"
-        >
-          导出
-        </el-button>
       </header>
 
       <MessageList :messages="store.messages" />
@@ -36,12 +27,11 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Download, Expand } from '@element-plus/icons-vue'
+import { Expand } from '@element-plus/icons-vue'
 import ChatSidebar from '@/components/chat/ChatSidebar.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import MessageList from '@/components/chat/MessageList.vue'
 import { useConversationStore } from '@/stores/conversation'
-import { downloadMarkdown, exportConversation } from '@/utils/export'
 
 const props = defineProps<{ conversationId?: number }>()
 
@@ -69,12 +59,6 @@ watch(
     }
   },
 )
-
-function handleExport() {
-  if (!store.current) return
-  const md = exportConversation(store.current.title, store.messages)
-  downloadMarkdown(store.current.title, md)
-}
 
 async function onSubmit(payload: { text?: string; imageUrls?: string[] }) {
   const hadCurrent = !!store.current
