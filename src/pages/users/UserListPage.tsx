@@ -32,7 +32,7 @@ export const UserListPage = () => {
       setData(res.data.data.list);
       setTotal(res.data.data.total);
     } catch {
-      message.error('获取用户列表失败');
+      /* 拦截器已统一显示后端错误消息 */
     } finally {
       setLoading(false);
     }
@@ -69,8 +69,7 @@ export const UserListPage = () => {
       fetchList();
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) return;
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '操作失败';
-      message.error(msg);
+      /* 拦截器已统一显示后端错误消息 */
     }
   };
 
@@ -79,9 +78,8 @@ export const UserListPage = () => {
       await deleteUser(id);
       message.success('删除成功');
       fetchList();
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '删除失败';
-      message.error(msg);
+    } catch {
+      /* 拦截器已统一显示后端错误消息 */
     }
   };
 
@@ -95,8 +93,7 @@ export const UserListPage = () => {
       setResetModalOpen(false);
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'errorFields' in err) return;
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '重置失败';
-      message.error(msg);
+      /* 拦截器已统一显示后端错误消息 */
     } finally {
       setResetLoading(false);
     }

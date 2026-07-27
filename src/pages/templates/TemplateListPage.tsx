@@ -40,7 +40,7 @@ export const TemplateListPage = () => {
       setData(res.data.data.list);
       setTotal(res.data.data.total);
     } catch {
-      message.error('获取模板列表失败');
+      /* 拦截器已统一显示后端错误消息 */
     } finally {
       setLoading(false);
     }
@@ -85,7 +85,7 @@ export const TemplateListPage = () => {
       message.success('删除成功');
       fetchList();
     } catch {
-      message.error('删除失败');
+      /* 拦截器已统一显示后端错误消息 */
     }
   };
 

@@ -29,9 +29,8 @@ export const LoginPage = () => {
       login({ userId, email, role }, token);
       message.success('登录成功');
       navigate('/users', { replace: true });
-    } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '登录失败';
-      message.error(msg);
+    } catch {
+      /* 拦截器已统一显示后端错误消息 */
     } finally {
       setLoading(false);
     }
