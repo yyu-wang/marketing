@@ -84,14 +84,8 @@ export class CosService implements OnModuleInit {
   }
 
   buildUrl(key: string): string {
-    if (this.cdnDomain) {
-      const base = this.cdnDomain.replace(/\/$/, '');
-      return `${base}/${key}`;
-    }
-    if (this.useAccelerate) {
-      return `https://${this.bucket}.cos.accelerate.myqcloud.com/${key}`;
-    }
-    return `https://${this.bucket}.cos.${this.region}.tencentcos.cn/${key}`;
+    // 通过后端代理返回相对路径，避免 COS 桶公开访问 / CORS 问题
+    return `/uploads/${key}`;
   }
 
   async delete(key: string): Promise<void> {
@@ -106,5 +100,20 @@ export class CosService implements OnModuleInit {
       this.logger.error(`COS 删除失败: ${key}`, err?.message ?? err);
       throw err;
     }
+  }
+
+  async getObject(key: string): Promise<{ body: Buffer; contentType: string }> {
+    if (!this.cos) {
+      throw new Error('COS 客户端未初始化');
+    }
+    const result = await this.cos.getObject({
+      Bucket: this.bucket,
+      Region: this.region,
+      Key: key,
+    });
+    return {
+      body: result.Body as Buffer,
+      contentType: (result.headers?.['content-type'] as string) || 'application/octet-stream',
+    };
   }
 }

@@ -81,7 +81,7 @@ export class UploadController {
     const safeExt = ['.jpg', '.jpeg', '.png', '.webp'].includes(ext)
       ? ext
       : '.png';
-    const filename = `uploads/${userId}-${uuidv4()}${safeExt}`;
+    const filename = `${userId}-${uuidv4()}${safeExt}`;
 
     if (!this.cosService.isAvailable()) {
       throw new InternalServerErrorException(

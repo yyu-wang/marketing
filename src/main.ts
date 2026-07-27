@@ -1,5 +1,6 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Reflector } from '@nestjs/core';
 import { NestFactory } from '@nestjs/core';
 import type { INestApplication } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -53,7 +54,9 @@ async function startServer(app: INestApplication): Promise<void> {
   const config = app.get(ConfigService);
   const port = config.get<number>('PORT', 3000);
 
-  app.setGlobalPrefix(GLOBAL_PREFIX);
+  app.setGlobalPrefix(GLOBAL_PREFIX, {
+    exclude: ['uploads/(.*)'],
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -65,8 +68,9 @@ async function startServer(app: INestApplication): Promise<void> {
   );
 
   app.useGlobalFilters(new HttpExceptionFilter());
+  const reflector = app.get(Reflector);
   app.useGlobalInterceptors(
-    new ResponseTransformInterceptor(),
+    new ResponseTransformInterceptor(reflector),
     new LoggingInterceptor(),
   );
 

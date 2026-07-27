@@ -53,7 +53,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
       );
     }
 
-    response.status(status).json(apiResponse);
+    // 4xx 客户端错误返回 HTTP 200，业务错误码通过 body.code 传递
+    // 5xx 服务端错误保持对应 HTTP 状态码，便于监控告警
+    const httpStatus = status < 500 ? 200 : status;
+    response.status(httpStatus).json(apiResponse);
   }
 
   /**

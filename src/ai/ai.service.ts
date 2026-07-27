@@ -43,6 +43,8 @@ export class AIService {
   private readonly logger = new Logger(AIService.name);
   private readonly aiTimeoutMs: number;
 
+  private readonly baseUrl: string;
+
   constructor(
     @Inject(AI_PROVIDER) private readonly provider: AIProvider,
     private readonly conversations: ConversationsService,
@@ -50,6 +52,7 @@ export class AIService {
     config: ConfigService,
   ) {
     this.aiTimeoutMs = config.get<number>('AI_TIMEOUT_MS', 15000);
+    this.baseUrl = config.get<string>('PUBLIC_BASE_URL', 'http://localhost:3000');
   }
 
   /**
@@ -92,6 +95,7 @@ export class AIService {
           channel: opts?.channel,
           tone: opts?.tone,
           length: opts?.length,
+          baseUrl: this.baseUrl,
         };
         const messages = await buildChatPrompt(promptInput);
 

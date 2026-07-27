@@ -56,18 +56,20 @@ export interface BuildChatPromptInput {
   channel?: string;
   tone?: string;
   length?: string;
+  /** 后端自身可访问的基地址，用于将 /uploads/xxx 相对路径转为绝对 URL */
+  baseUrl?: string;
 }
 
 export async function buildChatPrompt(
   input: BuildChatPromptInput,
 ): Promise<ChatMessage[]> {
-  const { text, imageUrls, preferDataUrl = true, continueFrom, channel, tone, length } = input;
+  const { text, imageUrls, preferDataUrl = true, continueFrom, channel, tone, length, baseUrl } = input;
 
   const userParts: any[] = [];
 
   if (imageUrls && imageUrls.length > 0) {
     const resolvedUrls = await Promise.all(
-      imageUrls.map((url) => resolveImageUrl(url, { preferDataUrl })),
+      imageUrls.map((url) => resolveImageUrl(url, { preferDataUrl, baseUrl })),
     );
     for (const resolved of resolvedUrls) {
       userParts.push({ type: 'image_url', image_url: { url: resolved } });
@@ -95,15 +97,20 @@ export async function buildChatPrompt(
 
 async function resolveImageUrl(
   imageUrl: string,
-  opts: { preferDataUrl?: boolean },
+  opts: { preferDataUrl?: boolean; baseUrl?: string },
 ): Promise<string> {
   if (imageUrl.startsWith('data:')) {
     return imageUrl;
   }
 
+  // 相对路径（如 /uploads/xxx.jpg）需要补全为绝对 URL 才能被服务端 fetch 下载
+  const absoluteUrl = imageUrl.startsWith('/') && opts.baseUrl
+    ? `${opts.baseUrl.replace(/\/$/, '')}${imageUrl}`
+    : imageUrl;
+
   if (opts.preferDataUrl) {
     try {
-      const resp = await fetch(imageUrl);
+      const resp = await fetch(absoluteUrl);
       if (!resp.ok) {
         throw new Error(`HTTP ${resp.status}: ${resp.statusText}`);
       }
