@@ -23,7 +23,7 @@ export class ApiError extends Error {
 
 let redirecting = false
 
-const AUTH_PATHS = [ROUTE_PATH.LOGIN, ROUTE_PATH.REGISTER]
+const AUTH_PATHS: readonly string[] = [ROUTE_PATH.LOGIN, ROUTE_PATH.REGISTER]
 
 const redirectToLogin = async (): Promise<void> => {
   if (redirecting) return
