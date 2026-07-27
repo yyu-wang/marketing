@@ -122,7 +122,7 @@ const fetchList = async () => {
     tableData.value = res.list
     total.value = res.total
   } catch {
-    ElMessage.error('获取列表失败')
+    /* 拦截器已统一显示后端错误消息 */
   } finally {
     loading.value = false
   }

@@ -185,6 +185,7 @@ import { getProjectList } from '@/api/project'
 import { useConversationStore } from '@/stores/conversation'
 import type { Message } from '@/types/conversation'
 
+
 const props = defineProps<{
   message: Message
   streamingDelta?: string

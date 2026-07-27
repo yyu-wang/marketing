@@ -1,4 +1,4 @@
-// AI SSE 事件载荷类型（V2 chat 模式）
+// AI SSE 事件载荷类型
 
 export type SseEventType = 'chunk' | 'done' | 'error'
 

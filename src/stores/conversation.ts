@@ -138,11 +138,8 @@ export const useConversationStore = defineStore('conversation', {
       let result
       try {
         result = await postMessage(conversationId, payload)
-      } catch (err) {
-        // 拦截器已显示后端错误消息，此处不再重复提示。仅处理非 API 响应的意外 Error。
-        if (err instanceof Error && !(err as { response?: unknown }).response) {
-          ElMessage.error(err.message || '消息发送失败')
-        }
+      } catch {
+        /* 拦截器已统一显示后端错误消息 */
         return
       }
 
@@ -181,7 +178,7 @@ export const useConversationStore = defineStore('conversation', {
       this.streamHandle = chatStream(
         assistantMsgId,
         {
-          onChunk: (e) => {
+          onChunk: (e: { delta: string }) => {
             this.streamingDelta += e.delta
           },
           onDone: () => {
@@ -193,7 +190,7 @@ export const useConversationStore = defineStore('conversation', {
             this.finalizeStream()
             void this.fetchList()
           },
-          onError: (message) => {
+          onError: (message: string) => {
             const target = this.findMessage(assistantMsgId)
             if (target) {
               target.status = 'error'
@@ -275,19 +272,14 @@ export const useConversationStore = defineStore('conversation', {
 
       const result = await editMessage(conversationId, messageId, content)
 
-      // 从本地消息列表中移除该消息之后的所有消息
       const idx = this.current.messages.findIndex((m) => m.id === messageId)
       if (idx >= 0) {
-        // 更新被编辑的消息内容
         this.current.messages[idx].content = content
-        // 消息列表按 DESC 存储（最新在开头），idx 位置是被编辑消息
-        // 需要删除 idx 之前的所有消息（更新的消息），保留 idx 及之后的（更早的历史）
         this.current.messages = this.current.messages.filter(
           (_, i) => i >= idx,
         )
       }
 
-      // 直接使用后端返回的 assistant 占位消息启动流式生成
       const now = new Date().toISOString()
       const assistantMsg: Message = {
         id: result.assistantMessageId,

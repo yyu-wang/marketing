@@ -105,9 +105,8 @@ const onSubmit = async (instance: FormInstance | null) => {
       await auth.register({ nickname: form.nickname.trim(), email: form.email.trim(), password: hashedPassword, hashVersion: 1 })
       ElMessage.success('注册成功')
       await router.replace('/')
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '注册失败，请稍后重试'
-      ElMessage.error(message)
+    } catch {
+      /* 拦截器已统一显示后端错误消息 */
     } finally {
       loading.value = false
     }

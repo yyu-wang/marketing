@@ -157,7 +157,7 @@ const fetchProject = async () => {
   try {
     project.value = await projectApi.getProject(projectId)
   } catch {
-    ElMessage.error('项目不存在或无权访问')
+    /* 拦截器已统一显示后端错误消息 */
   }
 }
 
@@ -170,7 +170,7 @@ const fetchCopies = async () => {
       order: sortOrder.value,
     })
   } catch {
-    ElMessage.error('获取文案列表失败')
+    /* 拦截器已统一显示后端错误消息 */
   } finally {
     loading.value = false
   }

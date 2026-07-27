@@ -26,11 +26,16 @@
 
     <!-- 渠道选择 -->
     <div class="chat-input__options">
-      <el-radio-group v-model="store.channel" size="small">
-        <el-radio-button value="xiaohongshu">小红书</el-radio-button>
-        <el-radio-button value="moments">朋友圈</el-radio-button>
-        <el-radio-button value="ad_slogan">广告语</el-radio-button>
-      </el-radio-group>
+      <div class="chat-input__options-left">
+        <el-radio-group
+          v-model="store.channel"
+          size="small"
+        >
+          <el-radio-button value="xiaohongshu">小红书</el-radio-button>
+          <el-radio-button value="moments">朋友圈</el-radio-button>
+          <el-radio-button value="ad_slogan">广告语</el-radio-button>
+        </el-radio-group>
+      </div>
 
       <el-button
         text
@@ -209,9 +214,7 @@ async function onFileChange(e: Event) {
     if (result.status === 'fulfilled') {
       uploaded.push(result.value.url)
     } else {
-      const msg =
-        result.reason instanceof Error ? result.reason.message : '图片上传失败'
-      ElMessage.error(msg)
+      /* 拦截器已统一显示后端错误消息 */
       hasError = true
     }
   }
@@ -287,6 +290,12 @@ onMounted(() => {
       flex-wrap: wrap;
       gap: 8px;
     }
+  }
+
+  &__options-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   &__advanced-toggle {

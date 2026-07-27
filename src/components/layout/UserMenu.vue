@@ -84,7 +84,7 @@ const handleProfileSave = async () => {
     ElMessage.success('昵称已更新')
     profileVisible.value = false
   } catch {
-    ElMessage.error('更新失败，请稍后重试')
+    /* 拦截器已统一显示后端错误消息 */
   } finally {
     saving.value = false
   }

@@ -141,7 +141,7 @@ const handleRestore = async () => {
     ElMessage.success('已恢复到选中版本')
     visible.value = false
   } catch {
-    ElMessage.error('恢复失败')
+    /* 拦截器已统一显示后端错误消息 */
   } finally {
     restoring.value = false
   }

@@ -79,9 +79,8 @@ const onSubmit = async (instance: FormInstance | null) => {
       ElMessage.success('登录成功')
       const redirect = (route.query.redirect as string) || '/'
       await router.replace(redirect)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : '登录失败，请稍后重试'
-      ElMessage.error(message)
+    } catch {
+      /* 拦截器已统一显示后端错误消息 */
     } finally {
       loading.value = false
     }
