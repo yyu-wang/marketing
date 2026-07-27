@@ -68,7 +68,7 @@ services:
       api:
         condition: service_healthy
     ports:
-      - '80:80'
+      - '8081:80'
 
   admin:
     image: ghcr.io/yyu-wang/copywise-admin:dev
@@ -78,7 +78,7 @@ services:
       api:
         condition: service_healthy
     ports:
-      - '8080:80'
+      - '8082:80'
 
 volumes:
   marketing-wise-mysql-data:
