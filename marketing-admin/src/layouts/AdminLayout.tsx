@@ -25,7 +25,7 @@ export const AdminLayout = () => {
     <Layout style={{ minHeight: '100vh' }}>
       <Sider breakpoint="lg" collapsedWidth="0">
         <div style={{ height: 32, margin: 16, color: '#fff', fontSize: 16, fontWeight: 600, textAlign: 'center', lineHeight: '32px' }}>
-          CopyWise Admin
+          Marketing Wise Admin
         </div>
         <Menu
           theme="dark"

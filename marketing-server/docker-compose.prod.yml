@@ -37,7 +37,7 @@ services:
       - marketing-wise-redis-data:/data
 
   api:
-    image: ghcr.io/yyu-wang/marketing-copywise-server:dev
+    image: ghcr.io/yyu-wang/marketing-server:dev
     container_name: marketing-wise-api
     restart: unless-stopped
     depends_on:
@@ -61,7 +61,7 @@ services:
       start_period: 20s
 
   web:
-    image: ghcr.io/yyu-wang/marketing-copywise-web:dev
+    image: ghcr.io/yyu-wang/marketing-web:dev
     container_name: marketing-wise-web
     restart: unless-stopped
     depends_on:
@@ -71,7 +71,7 @@ services:
       - '8081:80'
 
   admin:
-    image: ghcr.io/yyu-wang/marketing-copywise-admin:dev
+    image: ghcr.io/yyu-wang/marketing-admin:dev
     container_name: marketing-wise-admin
     restart: unless-stopped
     depends_on:

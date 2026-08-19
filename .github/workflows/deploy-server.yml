@@ -4,12 +4,12 @@ on:
   push:
     branches: [dev]
     paths:
-      - 'copywise-server/**'
+      - 'marketing-server/**'
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/yyu-wang/marketing-copywise-server
+  IMAGE_NAME: ghcr.io/yyu-wang/marketing-server
 
 jobs:
   build-api:
@@ -33,7 +33,7 @@ jobs:
       - name: Build and push API image
         uses: docker/build-push-action@v6
         with:
-          context: ./copywise-server
+          context: ./marketing-server
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:dev
@@ -51,7 +51,7 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
-          sudo cp copywise-server/docker-compose.prod.yml /opt/copywise/docker-compose.prod.yml
+          sudo cp marketing-server/docker-compose.prod.yml /opt/copywise/docker-compose.prod.yml
           cd /opt/copywise
           echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u "${{ github.actor }}" --password-stdin
           sudo docker compose -f docker-compose.prod.yml pull api

@@ -39,7 +39,7 @@ export const LoginPage = () => {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f0f2f5' }}>
       <Card style={{ width: 400 }}>
-        <Title level={3} style={{ textAlign: 'center', marginBottom: 32 }}>CopyWise 管理后台</Title>
+        <Title level={3} style={{ textAlign: 'center', marginBottom: 32 }}>Marketing Wise 管理后台</Title>
         <Form onFinish={onFinish} size="large">
           <Form.Item name="email" rules={[{ required: true, message: '请输入邮箱' }, { type: 'email', message: '请输入有效邮箱' }]}>
             <Input prefix={<UserOutlined />} placeholder="管理员邮箱" />

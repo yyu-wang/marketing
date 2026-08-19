@@ -1,6 +1,6 @@
-# CopyWise 后端服务
+# Marketing Wise 后端服务
 
-CopyWise（智能营销文案助手）的后端实现，基于 **NestJS + TypeScript + MySQL + Redis**，提供 AI 文案生成（SSE 流式）、多轮对话、项目管理、文案管理、数据看板与管理后台 API。对应 [REQUIREMENTS.md](../REQUIREMENTS.md)（产品需求规格说明书）范围。
+Marketing Wise（智能营销文案助手）的后端实现，基于 **NestJS + TypeScript + MySQL + Redis**，提供 AI 文案生成（SSE 流式）、多轮对话、项目管理、文案管理、数据看板与管理后台 API。对应 [REQUIREMENTS.md](../REQUIREMENTS.md)（产品需求规格说明书）范围。
 
 ## 目录结构
 

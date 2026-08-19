@@ -4,12 +4,12 @@ on:
   push:
     branches: [dev]
     paths:
-      - 'copywise-web/**'
+      - 'marketing-web/**'
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/yyu-wang/marketing-copywise-web
+  IMAGE_NAME: ghcr.io/yyu-wang/marketing-web
 
 jobs:
   build-and-push:
@@ -33,7 +33,7 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: ./copywise-web
+          context: ./marketing-web
           push: true
           tags: |
             ${{ env.IMAGE_NAME }}:dev

@@ -1,6 +1,6 @@
-# CopyWise Web
+# Marketing Wise Web
 
-CopyWise 智能营销文案助手的用户端 SPA —— Vue 3 + Vite + TypeScript + Element Plus。包含 AI 对话（SSE 流式）、项目管理、文案管理、数据看板及内嵌管理后台视图。
+Marketing Wise 智能营销文案助手的用户端 SPA —— Vue 3 + Vite + TypeScript + Element Plus。包含 AI 对话（SSE 流式）、项目管理、文案管理、数据看板及内嵌管理后台视图。
 
 ## 技术栈
 
@@ -41,8 +41,8 @@ src/
 ## 本地开发
 
 ```bash
-# 1) 先启动后端（在 ../copywise-server 中）
-cd ../copywise-server
+# 1) 先启动后端（在 ../marketing-server 中）
+cd ../marketing-server
 docker compose up -d mysql redis
 cp .env.example .env   # 填入 JWT_SECRET、AI_API_KEY
 npm install
@@ -51,7 +51,7 @@ npm run start:dev
 # → http://localhost:3000/api/health  /api/docs
 
 # 2) 启动前端
-cd ../copywise-web
+cd ../marketing-web
 npm install
 npm run dev
 # → http://localhost:5173
@@ -74,10 +74,10 @@ npm run dev
 | 变量 | 默认 | 作用 |
 |------|------|------|
 | `VITE_API_BASE` | `/api` | 后端基地址；开发由 Vite proxy 转发，生产由网关 / Nginx 反代 |
-| `VITE_APP_TITLE` | `CopyWise 智能营销文案助手` | HTML 标题与品牌名 |
+| `VITE_APP_TITLE` | `Marketing Wise 智能营销文案助手` | HTML 标题与品牌名 |
 
 Docker 构建支持通过 `--build-arg VITE_API_BASE=...` 在构建期覆写。
 
 ## 生产部署
 
-CI 部署见仓库根目录 `.github/workflows/deploy-web.yml`；也可复用 `../copywise-server/docker-compose.yml` 中的 `web` 服务（Nginx 静态托管 + 反代后端，SSE 关闭 buffering）。
+CI 部署见仓库根目录 `.github/workflows/deploy-web.yml`；也可复用 `../marketing-server/docker-compose.yml` 中的 `web` 服务（Nginx 静态托管 + 反代后端，SSE 关闭 buffering）。

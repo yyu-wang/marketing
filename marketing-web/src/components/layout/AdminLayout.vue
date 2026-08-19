@@ -3,7 +3,7 @@
     <!-- 移动端：顶部导航栏 -->
     <header v-if="isMobile" class="admin-mobile-header">
       <el-button text :icon="Expand" @click="sidebarOpen = true" />
-      <span class="admin-mobile-header__title">CopyWise 管理</span>
+      <span class="admin-mobile-header__title">Marketing Wise 管理</span>
       <el-button text :icon="Back" @click="$router.push('/')" />
     </header>
 
@@ -18,7 +18,7 @@
     >
       <div class="admin-sidebar__brand" @click="$router.push('/')">
         <span class="admin-sidebar__logo">CW</span>
-        <span class="admin-sidebar__title">CopyWise 管理</span>
+        <span class="admin-sidebar__title">Marketing Wise 管理</span>
       </div>
       <el-menu
         :default-active="activeMenu"

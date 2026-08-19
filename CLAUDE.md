@@ -4,19 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 项目概述
 
-CopyWise（智能营销文案助手）— AI 驱动的营销文案生成工具，包含三个子项目：
+Marketing Wise（智能营销文案助手）— AI 驱动的营销文案生成工具，包含三个子项目：
 
 | 项目 | 技术栈 | 端口 | 说明 |
 |------|--------|------|------|
-| `copywise-server/` | NestJS 10 + TypeORM + MySQL + Redis + SSE | 3000 | 后端 API 服务 |
-| `copywise-web/` | Vue 3 + Element Plus + Pinia + Vite | 5173 | 用户端 SPA |
-| `copywise-admin/` | React 19 + Ant Design 6 + Zustand + Vite | 5174 | 管理后台 SPA |
+| `marketing-server/` | NestJS 10 + TypeORM + MySQL + Redis + SSE | 3000 | 后端 API 服务 |
+| `marketing-web/` | Vue 3 + Element Plus + Pinia + Vite | 5173 | 用户端 SPA |
+| `marketing-admin/` | React 19 + Ant Design 6 + Zustand + Vite | 5174 | 管理后台 SPA |
 
 ---
 
 ## 常用命令
 
-### 后端 (copywise-server/)
+### 后端 (marketing-server/)
 
 ```bash
 npm run start:dev      # 开发启动 (热重载)
@@ -31,7 +31,7 @@ npm run migration:run  # 执行迁移
 npm run migration:revert  # 回滚迁移
 ```
 
-### 前端 (copywise-web/)
+### 前端 (marketing-web/)
 
 ```bash
 npm run dev        # Vite 开发服务器 (端口 5173)
@@ -41,7 +41,7 @@ npm run lint       # ESLint 检查
 npm run type-check # 仅 vue-tsc 类型检查
 ```
 
-### 管理后台 (copywise-admin/)
+### 管理后台 (marketing-admin/)
 
 ```bash
 npm run dev        # Vite 开发服务器 (端口 5174)
@@ -53,7 +53,7 @@ npm run lint       # Oxlint 检查
 ### Docker 本地开发
 
 ```bash
-cd copywise-server && docker compose up -d   # 启动 MySQL + Redis + API + Web
+cd marketing-server && docker compose up -d   # 启动 MySQL + Redis + API + Web
 ```
 
 ---

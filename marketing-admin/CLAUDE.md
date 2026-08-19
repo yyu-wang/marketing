@@ -4,7 +4,7 @@ This file provides guidance to Claude Code when working in this repository.
 
 ## 项目概述
 
-CopyWise Admin — CopyWise 平台的管理后台，提供用户管理和模板管理功能。
+Marketing Wise Admin — Marketing Wise 平台的管理后台，提供用户管理和模板管理功能。
 - **React 19** + **TypeScript 6** (strict) + **Vite 8**
 - **Ant Design 6** + **Zustand 5** + **React Router v7** + **axios**
 

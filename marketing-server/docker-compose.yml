@@ -68,7 +68,7 @@ services:
     profiles:
       - full
     build:
-      context: ../copywise-web
+      context: ../marketing-web
       dockerfile: Dockerfile
       args:
         VITE_API_BASE: /api

@@ -1,6 +1,6 @@
-# CopyWise 管理后台
+# Marketing Wise 管理后台
 
-CopyWise 平台的管理后台，面向管理员提供用户管理与 Prompt 模板管理。独立 SPA，与用户端（copywise-web）分离部署。
+Marketing Wise 平台的管理后台，面向管理员提供用户管理与 Prompt 模板管理。独立 SPA，与用户端（marketing-web）分离部署。
 
 ## 技术栈
 
@@ -46,16 +46,16 @@ View (Page/Component) → Store (Zustand) → API (axios)
 
 ## 本地开发
 
-前置：先启动后端服务（copywise-server，端口 3000）。
+前置：先启动后端服务（marketing-server，端口 3000）。
 
 ```bash
-cd copywise-admin
+cd marketing-admin
 npm install
 npm run dev
 # → http://localhost:5174（/api 代理到 http://localhost:3000）
 ```
 
-使用管理员账号登录（种子脚本：`copywise-server` 下 `npm run seed`）。
+使用管理员账号登录（种子脚本：`marketing-server` 下 `npm run seed`）。
 
 ## 脚本
 
