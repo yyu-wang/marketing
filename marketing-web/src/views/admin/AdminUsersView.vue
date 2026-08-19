@@ -17,7 +17,7 @@
       <el-button type="primary" :icon="Plus" @click="handleCreate">新增用户</el-button>
     </div>
 
-    <el-table :data="tableData" v-loading="loading" stripe class="admin-table" row-key="id">
+    <el-table v-loading="loading" :data="tableData" stripe class="admin-table" row-key="id">
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="email" label="邮箱" min-width="200" />
       <el-table-column prop="role" label="角色" width="100">

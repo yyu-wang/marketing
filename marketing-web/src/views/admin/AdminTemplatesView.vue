@@ -28,7 +28,7 @@
       <el-button type="primary" :icon="Plus" @click="handleCreate">新增模板</el-button>
     </div>
 
-    <el-table :data="tableData" v-loading="loading" stripe class="admin-table" row-key="id">
+    <el-table v-loading="loading" :data="tableData" stripe class="admin-table" row-key="id">
       <el-table-column prop="id" label="ID" width="80" />
       <el-table-column prop="name" label="模板名称" min-width="160" />
       <el-table-column prop="channel" label="渠道" width="100">

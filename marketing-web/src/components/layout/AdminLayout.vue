@@ -8,7 +8,7 @@
     </header>
 
     <!-- 侧边栏：PC 常驻 → 移动端 overlay drawer -->
-    <Teleport to="body" v-if="isMobile && sidebarOpen">
+    <Teleport v-if="isMobile && sidebarOpen" to="body">
       <div class="admin-sidebar-overlay" @click="sidebarOpen = false" />
     </Teleport>
 
