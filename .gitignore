@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.local
+*.log
+.DS_Store
+# 本地工具目录 / 上传临时目录
+.superpowers/
+.trae-html-share-packages/
+.uploads/
