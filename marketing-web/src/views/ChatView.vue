@@ -13,6 +13,15 @@
         <div class="chat-view__title">
           {{ store.current?.title ?? '新对话' }}
         </div>
+        <el-button
+          class="chat-view__export-btn"
+          text
+          :icon="Download"
+          :disabled="!canExport"
+          @click="onExport"
+        >
+          导出
+        </el-button>
       </header>
 
       <MessageList :messages="store.messages" />
@@ -25,19 +34,31 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { Expand } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { Download, Expand } from '@element-plus/icons-vue'
 import ChatSidebar from '@/components/chat/ChatSidebar.vue'
 import ChatInput from '@/components/chat/ChatInput.vue'
 import MessageList from '@/components/chat/MessageList.vue'
 import { useConversationStore } from '@/stores/conversation'
+import {
+  buildExportFilename,
+  downloadMarkdown,
+  exportConversation,
+} from '@/utils/conversation-export'
 
 const props = defineProps<{ conversationId?: number }>()
 
 const store = useConversationStore()
 const router = useRouter()
 const sidebarOpen = ref(false)
+
+const canExport = computed(() =>
+  store.messages.some(
+    (m) => m.content && m.status !== 'pending' && m.status !== 'streaming',
+  ),
+)
 
 onMounted(() => {
   void store.fetchList()
@@ -67,6 +88,12 @@ async function onSubmit(payload: { text?: string; imageUrls?: string[] }) {
   if (!hadCurrent && store.current) {
     void router.replace(`/c/${store.current.id}`)
   }
+}
+
+function onExport() {
+  const title = store.current?.title ?? '新对话'
+  downloadMarkdown(exportConversation(store.messages, title), buildExportFilename(title))
+  ElMessage.success('已导出 Markdown 文件')
 }
 </script>
 
