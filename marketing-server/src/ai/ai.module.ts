@@ -1,13 +1,21 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AIProviderModule } from '../ai-provider/ai-provider.module';
 import { ConversationsModule } from '../conversations/conversations.module';
+import { PromptTemplateEntity } from '../database/entities/prompt-template.entity';
 import { QuotaModule } from '../quota/quota.module';
 import { AIController } from './ai.controller';
 import { AIService } from './ai.service';
 
 @Module({
-  imports: [ConfigModule, AIProviderModule, ConversationsModule, QuotaModule],
+  imports: [
+    ConfigModule,
+    AIProviderModule,
+    ConversationsModule,
+    QuotaModule,
+    TypeOrmModule.forFeature([PromptTemplateEntity]),
+  ],
   controllers: [AIController],
   providers: [AIService],
   exports: [AIService],

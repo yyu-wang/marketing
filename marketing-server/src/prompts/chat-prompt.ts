@@ -30,13 +30,20 @@ const LENGTH_PROMPTS: Record<string, string> = {
   long: '回复可以详细展开。',
 };
 
-function buildSystemPrompt(channel?: string, tone?: string, length?: string): string {
-  const basePrompt = channel && CHANNEL_SYSTEM_PROMPTS[channel]
-    ? CHANNEL_SYSTEM_PROMPTS[channel]
-    : `你是一位资深中文营销文案撰写专家。
+function buildSystemPrompt(
+  channel?: string,
+  tone?: string,
+  length?: string,
+  channelTemplate?: string,
+): string {
+  // 优先使用后台配置的渠道模板，未配置时回退内置渠道 prompt
+  const basePrompt = channelTemplate
+    ?? (channel && CHANNEL_SYSTEM_PROMPTS[channel]
+      ? CHANNEL_SYSTEM_PROMPTS[channel]
+      : `你是一位资深中文营销文案撰写专家。
 用户会提供创作诉求，可能附带一张或多张图片。请你根据用户的需求，提供专业、有创意的文案建议。
 回答风格自然、专业，像一位经验丰富的营销顾问在与客户交流。
-如果用户提供了图片，请仔细观察图片中的细节（产品、场景、风格、色调、人物等），结合这些细节给出建议。`;
+如果用户提供了图片，请仔细观察图片中的细节（产品、场景、风格、色调、人物等），结合这些细节给出建议。`);
 
   const extras: string[] = [];
   if (tone && TONE_PROMPTS[tone]) extras.push(TONE_PROMPTS[tone]);
@@ -56,6 +63,8 @@ export interface BuildChatPromptInput {
   channel?: string;
   tone?: string;
   length?: string;
+  /** 后台配置的渠道系统提示词（prompt_templates），未配置时回退内置 prompt */
+  channelSystemPrompt?: string;
   /** 后端自身可访问的基地址，用于将 /uploads/xxx 相对路径转为绝对 URL */
   baseUrl?: string;
 }
@@ -63,7 +72,17 @@ export interface BuildChatPromptInput {
 export async function buildChatPrompt(
   input: BuildChatPromptInput,
 ): Promise<ChatMessage[]> {
-  const { text, imageUrls, preferDataUrl = true, continueFrom, channel, tone, length, baseUrl } = input;
+  const {
+    text,
+    imageUrls,
+    preferDataUrl = true,
+    continueFrom,
+    channel,
+    tone,
+    length,
+    channelSystemPrompt,
+    baseUrl,
+  } = input;
 
   const userParts: any[] = [];
 
@@ -81,7 +100,7 @@ export async function buildChatPrompt(
     text: (text && text.trim()) || '请根据图片内容生成文案',
   });
 
-  const systemPrompt = buildSystemPrompt(channel, tone, length);
+  const systemPrompt = buildSystemPrompt(channel, tone, length, channelSystemPrompt);
 
   const messages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },

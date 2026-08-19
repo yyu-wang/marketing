@@ -7,9 +7,12 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
 import { Observable, Subject } from 'rxjs';
+import { Repository } from 'typeorm';
 import { AI_PROVIDER, AIProvider } from '../ai-provider/ai-provider.interface';
 import { ConversationsService } from '../conversations/conversations.service';
+import { PromptTemplateEntity } from '../database/entities/prompt-template.entity';
 import { buildChatPrompt, type BuildChatPromptInput } from '../prompts/chat-prompt';
 import { QuotaService } from '../quota/quota.service';
 
@@ -49,6 +52,8 @@ export class AIService {
     @Inject(AI_PROVIDER) private readonly provider: AIProvider,
     private readonly conversations: ConversationsService,
     private readonly quotaService: QuotaService,
+    @InjectRepository(PromptTemplateEntity)
+    private readonly templateRepo: Repository<PromptTemplateEntity>,
     config: ConfigService,
   ) {
     this.aiTimeoutMs = config.get<number>('AI_TIMEOUT_MS', 15000);
@@ -86,7 +91,7 @@ export class AIService {
           assistantMessageId,
         );
 
-        // 2. 构造 messages（含可选多图）
+        // 2. 构造 messages（含可选多图，渠道系统提示词优先取后台模板）
         const promptInput: BuildChatPromptInput = {
           text: user.content ?? '',
           imageUrls: user.imageUrls ?? undefined,
@@ -95,6 +100,9 @@ export class AIService {
           channel: opts?.channel,
           tone: opts?.tone,
           length: opts?.length,
+          channelSystemPrompt: opts?.channel
+            ? await this.resolveChannelSystemPrompt(opts.channel)
+            : undefined,
           baseUrl: this.baseUrl,
         };
         const messages = await buildChatPrompt(promptInput);
@@ -155,6 +163,18 @@ export class AIService {
   // -------------------------------------------------------------------
   // 内部
   // -------------------------------------------------------------------
+
+  /**
+   * 解析渠道系统提示词：取 prompt_templates 中该渠道最近更新的模板；
+   * 无模板时返回 undefined，由 buildSystemPrompt 回退内置渠道 prompt。
+   */
+  private async resolveChannelSystemPrompt(channel: string): Promise<string | undefined> {
+    const template = await this.templateRepo.findOne({
+      where: { channel },
+      order: { updatedAt: 'DESC' },
+    });
+    return template?.content;
+  }
 
   private consumeProvider(
     messages: Parameters<AIProvider['generateStream']>[0],
