@@ -126,7 +126,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { ArrowDown, ArrowUp, Close, Loading, Plus, Promotion, VideoPause } from '@element-plus/icons-vue'
 import { getQuotaStatus } from '@/api/quota'
@@ -164,6 +164,14 @@ const fetchQuota = async () => {
     /* silently ignore */
   }
 }
+
+// 后端在生成完成后才记账，生成结束（完成/中止/超额报错）后刷新额度
+watch(
+  () => store.streaming,
+  (current, previous) => {
+    if (previous && !current) void fetchQuota()
+  },
+)
 
 const placeholder = computed(
   () => props.placeholder || '直接输入文本 / 图片 + 文本，即可开始创作...',

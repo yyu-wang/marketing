@@ -1,6 +1,6 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Menu, Button, theme } from 'antd';
-import { UserOutlined, FileTextOutlined, LogoutOutlined } from '@ant-design/icons';
+import { UserOutlined, FileTextOutlined, AuditOutlined, LogoutOutlined } from '@ant-design/icons';
 import { useAuthStore } from '@/stores/auth';
 
 const { Header, Sider, Content } = Layout;
@@ -8,6 +8,7 @@ const { Header, Sider, Content } = Layout;
 const menuItems = [
   { key: '/users', icon: <UserOutlined />, label: '用户管理' },
   { key: '/templates', icon: <FileTextOutlined />, label: '模板管理' },
+  { key: '/quota', icon: <AuditOutlined />, label: '额度管理' },
 ];
 
 export const AdminLayout = () => {

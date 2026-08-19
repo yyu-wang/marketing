@@ -59,6 +59,10 @@ export class UserEntity {
   @Column({ type: 'tinyint', width: 1, name: 'password_version', default: 0 })
   passwordVersion: number;
 
+  /** 每日 AI 生成额度上限，null 时回退环境变量 QUOTA_DAILY_DEFAULT */
+  @Column({ type: 'int', name: 'daily_quota', unsigned: true, nullable: true })
+  dailyQuota: number | null;
+
   // -------------------------------------------------------------------
   // 关系：一个用户可创建多个项目、多条额度记录
   // -------------------------------------------------------------------
