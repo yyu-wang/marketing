@@ -131,12 +131,15 @@ API 层 (axios 封装，Bearer Token + 401 处理)
 
 | Entity | 表名 | 关键字段 |
 |--------|------|---------|
-| UserEntity | `users` | id, email (unique), passwordHash (bcrypt cost 12), role (admin/user), isActive |
+| UserEntity | `users` | id, email (unique), passwordHash (bcrypt cost 12), role (admin/user), isActive, dailyQuota (可空，每日额度) |
 | ProjectEntity | `projects` | id, userId (FK CASCADE), name (用户内唯一), productDesc, targetAudience |
 | CopyEntity | `copies` | id, projectId (FK CASCADE), channel (xiaohongshu/moments/ad_slogan), content, isStarred, isEdited |
 | ConversationEntity | `conversations` | id, userId (FK CASCADE), title |
 | MessageEntity | `messages` | id, conversationId (FK CASCADE), role (user/assistant), content, imageUrls (JSON), status (pending/streaming/done/error) |
+| MessageVersionEntity | `message_versions` | id, messageId (FK CASCADE), content (历史版本) |
 | PromptTemplateEntity | `prompt_templates` | id, name, channel, content |
+| QuotaRecordEntity | `quota_records` | id, userId, recordDate (user_id + record_date 唯一), usedCount, maxCount |
+| SensitiveWordEntity | `sensitive_words` | id, word, category, isActive |
 
 ---
 
@@ -145,18 +148,19 @@ API 层 (axios 封装，Bearer Token + 401 处理)
 ```
 AppModule
   ├── ConfigModule (isGlobal)
-  ├── TypeOrmModule (6 个 Entity)
+  ├── TypeOrmModule (9 个 Entity)
   ├── ThrottlerModule
-  ├── AuthModule (JWT + Passport，导出 AuthService + JwtStrategy)
-  ├── LocalStorageModule (@Global，本地磁盘存储)
-  ├── RedisModule (@Global，ioredis，已定义未导入 — 预留)
   ├── AdminModule (AuthModule + AdminGuard)
+  ├── AnalyticsModule (依赖 CopyService 的聚合查询)
+  ├── AuthModule (JWT + Passport，导出 AuthService + JwtStrategy)
+  ├── CopyModule (V1 文案管理，导出 CopyService)
+  ├── LocalStorageModule (@Global，本地磁盘存储)
   ├── UploadModule (依赖 LocalStorageService)
   ├── ConversationsModule (导出 TypeOrmModule + ConversationsService)
-  ├── AIModule (AIProviderModule + ConversationsModule)
-  ├── AgentModule (LangChain/LangGraph，工具调用 Agent，Coexists alongside AIModule)
-  ├── CopyModule (V1 文案管理，导出 CopyService)
-  └── AnalyticsModule (依赖 CopyService 的聚合查询)
+  ├── ProjectModule (项目 CRUD)
+  ├── QuotaModule (每日生成额度，导出 QuotaService)
+  ├── RedisModule (@Global，ioredis)
+  └── AIModule (AIProviderModule + ConversationsModule)
 ```
 
 ---
@@ -186,7 +190,7 @@ AppModule
 - Composition API + `<script setup lang="ts">` 为默认写法
 - Props 使用 `defineProps<{...}>()` 纯类型声明
 - Emits 使用 `defineEmits<{...}>()` 函数签名语法
-- 复用逻辑抽离为 Composable (`useXxx`) — 当前 composables 目录为空，需逐步抽离
+- 复用逻辑抽离为 Composable (`useXxx`) — 现有 `useDevice.ts`，新逻辑继续在此目录抽离
 - 父子通信: props down / emit up，跨层级用 Pinia store
 - 列表渲染 key 使用唯一业务 ID，禁止数组 index
 - 副作用（定时器、事件监听、SSE stream）必须在 `onUnmounted` 清理
