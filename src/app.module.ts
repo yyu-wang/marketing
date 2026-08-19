@@ -15,9 +15,9 @@ import { createTypeOrmConfig } from './database/typeorm.config';
 import { HealthController } from './health.controller';
 import { ProjectModule } from './project/project.module';
 import { QuotaModule } from './quota/quota.module';
+import { LocalStorageModule } from './local-storage/local-storage.module';
 import { RedisModule } from './database/redis.module';
 import { UploadModule } from './upload/upload.module';
-import { CosModule } from './cos/cos.module';
 
 /**
  * 应用根模块（V2：对话式图文创作）
@@ -59,7 +59,7 @@ import { CosModule } from './cos/cos.module';
     AnalyticsModule,
     AuthModule,
     CopyModule,
-    CosModule,
+    LocalStorageModule,
     UploadModule,
     ConversationsModule,
     ProjectModule,

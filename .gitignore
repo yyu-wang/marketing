@@ -10,6 +10,8 @@ coverage
 # 日志
 *.log
 logs
+# 图片本地存储
+uploads
 # IDE
 .idea
 .vscode

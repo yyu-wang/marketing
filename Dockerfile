@@ -16,6 +16,8 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY --from=builder /app/dist ./dist
+# 图片本地存储目录（未挂载卷时兜底，避免无写权限）
+RUN mkdir -p /app/uploads
 # 暴露服务端口
 EXPOSE 3000
 # 健康检查（使用 Node.js 替代 wget，消除 BusyBox 兼容性风险）

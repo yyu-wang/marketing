@@ -22,7 +22,7 @@ import {
   CurrentUser,
   JwtPayload,
 } from '../common/decorators/current-user.decorator';
-import { CosService } from '../cos/cos.service';
+import { LocalStorageService } from '../local-storage/local-storage.service';
 
 const ALLOWED_MIME = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
@@ -33,13 +33,13 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 export class UploadController {
   private readonly logger = new Logger(UploadController.name);
 
-  constructor(private readonly cosService: CosService) {}
+  constructor(private readonly localStorageService: LocalStorageService) {}
 
   @Post()
   @ApiOperation({
     summary: '上传图片',
     description:
-      '接受 image/jpeg|png|webp，上传到腾讯云 COS。返回公网可访问的 URL。',
+      '接受 image/jpeg|png|webp，写入本地磁盘。返回相对 URL（/uploads/xxx）。',
   })
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -83,19 +83,17 @@ export class UploadController {
       : '.png';
     const filename = `${userId}-${uuidv4()}${safeExt}`;
 
-    if (!this.cosService.isAvailable()) {
-      throw new InternalServerErrorException(
-        'COS 对象存储服务不可用，请稍后重试',
-      );
+    if (!this.localStorageService.isAvailable()) {
+      throw new InternalServerErrorException('本地存储服务不可用，请稍后重试');
     }
 
-    const result = await this.cosService.upload(
+    const result = await this.localStorageService.upload(
       filename,
       file.buffer,
       file.mimetype,
     );
     this.logger.log(
-      `用户 ${userId} 上传图片到 COS: ${filename} (${file.size} bytes)`,
+      `用户 ${userId} 上传图片到本地存储: ${filename} (${file.size} bytes)`,
     );
     return {
       url: result.url,
