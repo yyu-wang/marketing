@@ -32,7 +32,7 @@ export class SensitiveWordService {
     const saved = await this.wordRepo.save(
       this.wordRepo.create({ word: dto.word, category: dto.category || 'general', isActive: true }),
     );
-    await this.filter.reload();
+    await this.filter.publishChange();
     return saved;
   }
 
@@ -45,7 +45,7 @@ export class SensitiveWordService {
     if (dto.isActive !== undefined) entity.isActive = dto.isActive;
 
     await this.wordRepo.save(entity);
-    await this.filter.reload();
+    await this.filter.publishChange();
     return entity;
   }
 
@@ -53,7 +53,7 @@ export class SensitiveWordService {
     const entity = await this.wordRepo.findOne({ where: { id }, select: ['id'] });
     if (!entity) throw new NotFoundException('敏感词不存在');
     await this.wordRepo.remove(entity);
-    await this.filter.reload();
+    await this.filter.publishChange();
     return { deleted: true };
   }
 }

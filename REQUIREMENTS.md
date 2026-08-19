@@ -11,12 +11,12 @@
 |--------|----------|--------|--------|--------|
 | P1     | 5        | 5      | 0      | 0      |
 | P2     | 7        | 7      | 0      | 0      |
-| P3     | 5        | 4      | 1      | 0      |
-| 合计   | 17       | 16     | 1      | 0      |
+| P3     | 5        | 5      | 0      | 0      |
+| 合计   | 17       | 17     | 0      | 0      |
 
 > **同步说明（2026-08-19）**
 > - 本表以需求粒度统计，`已完成`=全部子项已勾选，`进行中`=部分子项未实现，`待开始`=未开始。
-> - P1、P2 已全部完成；P3 仅剩**敏感词 Redis 热更新（P3-01c）**。
+> - P1、P2、P3 全部完成。
 > - 另有独立 React 管理后台 `marketing-admin/`（用户 / 模板 / 额度管理），与 `marketing-web/` 内嵌的 Vue 管理后台并存；本表未纳入该 SPA。
 
 ---
@@ -320,7 +320,7 @@
 - [x] **P3-01a** 新增 `sensitive_words` 表迁移
   - 字段：`id`, `word` (varchar 100), `category` (varchar 50), `isActive` (boolean), `createdAt`
 - [x] **P3-01b** 创建 `SensitiveWordEntity`
-- [ ] **P3-01c** 重构 `SensitiveWordFilter`：启动时从 DB 加载词库到内存 DFA，支持 Redis Pub/Sub 热更新
+- [x] **P3-01c** 重构 `SensitiveWordFilter`：启动时从 DB 加载词库到内存 Trie（DFA），Redis Pub/Sub 广播变更、各实例订阅后重载（发布失败回退本地重载，忽略自身消息避免重复）
 - [x] **P3-01d** Admin 新增"敏感词管理"页（列表、新增、停用、删除）
 - [x] **P3-01e** 敏感词命中时记录日志（`sensitive_word_hits` 表或日志文件）
 
