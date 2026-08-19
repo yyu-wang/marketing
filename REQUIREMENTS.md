@@ -11,12 +11,12 @@
 |--------|----------|--------|--------|--------|
 | P1     | 5        | 5      | 0      | 0      |
 | P2     | 7        | 7      | 0      | 0      |
-| P3     | 5        | 3      | 2      | 0      |
-| 合计   | 17       | 15     | 2      | 0      |
+| P3     | 5        | 4      | 1      | 0      |
+| 合计   | 17       | 16     | 1      | 0      |
 
 > **同步说明（2026-08-19）**
 > - 本表以需求粒度统计，`已完成`=全部子项已勾选，`进行中`=部分子项未实现，`待开始`=未开始。
-> - P1、P2 已全部完成；P3 仅剩**敏感词 Redis 热更新（P3-01c）/ AuthService 用户缓存（P3-02c）**。
+> - P1、P2 已全部完成；P3 仅剩**敏感词 Redis 热更新（P3-01c）**。
 > - 另有独立 React 管理后台 `marketing-admin/`（用户 / 模板 / 额度管理），与 `marketing-web/` 内嵌的 Vue 管理后台并存；本表未纳入该 SPA。
 
 ---
@@ -333,7 +333,7 @@
 
 - [x] **P3-02a** 将 `RedisModule` 导入 `AppModule`
 - [x] **P3-02b** `TemplateService` 缓存：`GET /api/admin/templates` 结果缓存 10 分钟，写操作后清除
-- [ ] **P3-02c** `AuthService` 缓存用户信息（`findById` 缓存 5 分钟）
+- [x] **P3-02c** `AuthService` 缓存用户信息（`findUserById` Redis 缓存 5 分钟，`updateProfile` 写后清除；JwtStrategy 已有同款 5 分钟 payload 缓存）
 - [x] **P3-02d** Throttler 切换到 Redis 存储（`@nestjs/throttler-storage-redis`）
 - [x] **P3-02e** 对话列表缓存（用户最近 100 条对话，写操作后刷新）
 

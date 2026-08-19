@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   UnauthorizedException,
@@ -9,9 +10,13 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { hash, compare } from 'bcryptjs';
 import { createHash } from 'crypto';
+import Redis from 'ioredis';
 import { Repository } from 'typeorm';
+import { REDIS_CLIENT } from '../database/redis.module';
 import { UserEntity } from '../database/entities/user.entity';
 import { LoginDto, RegisterDto } from './dto/auth.dto';
+
+const USER_PROFILE_CACHE_TTL_SEC = 300; // 5 分钟
 
 /**
  * 认证服务
@@ -34,6 +39,7 @@ export class AuthService {
     private readonly userRepo: Repository<UserEntity>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
   /**
@@ -130,6 +136,7 @@ export class AuthService {
     }
     user.nickname = nickname;
     await this.userRepo.save(user);
+    await this.redis.del(this.profileCacheKey(userId));
     return { nickname: user.nickname };
   }
 
@@ -141,13 +148,27 @@ export class AuthService {
    * passwordHash 直接返回给前端。
    */
   async findUserById(userId: number): Promise<Partial<UserEntity> | null> {
+    const cacheKey = this.profileCacheKey(userId);
+    const cached = await this.redis.get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached) as Partial<UserEntity>;
+    }
+
     const user = await this.userRepo.findOne({
       where: { id: userId },
       select: ['id', 'email', 'nickname', 'createdAt', 'updatedAt'],
     });
 
+    if (user) {
+      await this.redis.set(cacheKey, JSON.stringify(user), 'EX', USER_PROFILE_CACHE_TTL_SEC);
+    }
+
     this.logger.debug(`[findUserById] userId=${userId} found=${!!user}`);
     return user;
+  }
+
+  private profileCacheKey(userId: number): string {
+    return `user:profile:${userId}`;
   }
 
   /**

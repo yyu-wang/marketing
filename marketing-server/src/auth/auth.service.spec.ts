@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { hash as hashPw, compare } from 'bcryptjs';
+import { REDIS_CLIENT } from '../database/redis.module';
 import { UserEntity } from '../database/entities/user.entity';
 import { AuthService } from './auth.service';
 
@@ -21,6 +22,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let userRepo: { findOne: jest.Mock; create: jest.Mock; save: jest.Mock };
   let jwtService: { signAsync: jest.Mock };
+  let redis: { get: jest.Mock; set: jest.Mock; del: jest.Mock };
 
   beforeEach(async () => {
     userRepo = {
@@ -30,6 +32,11 @@ describe('AuthService', () => {
     };
     jwtService = {
       signAsync: jest.fn().mockResolvedValue('mock.jwt.token'),
+    };
+    redis = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue('OK'),
+      del: jest.fn().mockResolvedValue(1),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -41,6 +48,7 @@ describe('AuthService', () => {
           provide: ConfigService,
           useValue: { get: (k: string, def?: unknown) => def ?? 'test-secret' },
         },
+        { provide: REDIS_CLIENT, useValue: redis },
       ],
     }).compile();
 
@@ -127,7 +135,7 @@ describe('AuthService', () => {
   });
 
   describe('findUserById', () => {
-    it('按 id 查询用户时应返回安全字段并打印日志', async () => {
+    it('未命中缓存时按 id 查询用户并写入缓存（5 分钟 TTL）', async () => {
       const user = {
         id: 1,
         email: 'a@b.com',
@@ -142,6 +150,41 @@ describe('AuthService', () => {
         where: { id: 1 },
         select: ['id', 'email', 'nickname', 'createdAt', 'updatedAt'],
       });
+      expect(redis.set).toHaveBeenCalledWith(
+        'user:profile:1',
+        JSON.stringify(user),
+        'EX',
+        300,
+      );
+    });
+
+    it('命中缓存时直接返回，不再查询数据库', async () => {
+      redis.get.mockResolvedValueOnce(
+        JSON.stringify({ id: 1, email: 'a@b.com', nickname: 'cached' }),
+      );
+
+      const result = await service.findUserById(1);
+
+      expect(result).toEqual({ id: 1, email: 'a@b.com', nickname: 'cached' });
+      expect(userRepo.findOne).not.toHaveBeenCalled();
+    });
+
+    it('用户不存在时不写入缓存', async () => {
+      userRepo.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.findUserById(999)).resolves.toBeNull();
+      expect(redis.set).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateProfile', () => {
+    it('更新昵称后清除对应用户的缓存', async () => {
+      userRepo.findOne.mockResolvedValueOnce({ id: 1, nickname: 'old' });
+      userRepo.save.mockResolvedValueOnce({ id: 1, nickname: 'new' });
+
+      await service.updateProfile(1, 'new');
+
+      expect(redis.del).toHaveBeenCalledWith('user:profile:1');
     });
   });
 });
