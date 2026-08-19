@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/yyu-wang/copywise-admin
+  IMAGE_NAME: ghcr.io/yyu-wang/marketing-copywise-admin
 
 jobs:
   build-and-push:
