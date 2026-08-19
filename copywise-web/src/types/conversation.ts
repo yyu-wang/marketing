@@ -1,0 +1,59 @@
+// 对话与消息类型（与后端 ConversationsService 返回结构对齐）
+
+export type MessageRole = 'user' | 'assistant'
+export type MessageStatus = 'pending' | 'streaming' | 'done' | 'error'
+
+export interface Message {
+  id: number
+  conversationId: number
+  role: MessageRole
+  content: string | null
+  imageUrls: string[] | null
+  status: MessageStatus
+  errorMessage?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ConversationSummary {
+  id: number
+  title: string
+  createdAt: string
+}
+
+export interface ConversationGroup {
+  date: string // '今天' | '昨天' | 'YYYY/MM/DD'
+  items: ConversationSummary[]
+}
+
+export interface ConversationDetail {
+  id: number
+  title: string
+  createdAt: string
+  messages: Message[]
+  total: number
+  page: number
+  pageSize: number
+}
+
+export interface GetConversationParams {
+  page?: number
+  pageSize?: number
+}
+
+export interface PostMessagePayload {
+  text?: string
+  imageUrls?: string[]
+}
+
+export interface PostMessageResult {
+  userMessageId: number
+  assistantMessageId: number
+}
+
+export interface UploadResult {
+  url: string
+  filename: string
+  size: number
+  mime: string
+}

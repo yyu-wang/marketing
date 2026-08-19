@@ -1,0 +1,15 @@
+export const ROUTE_PATH = {
+  HOME: '/',
+  LOGIN: '/login',
+  REGISTER: '/register',
+  CONVERSATION: '/c',
+  CONVERSATION_BY_ID: '/c/:id',
+  DASHBOARD: '/dashboard',
+  PROJECTS: '/projects',
+  PROJECT_DETAIL: '/projects/:id',
+  ADMIN: '/admin',
+  ADMIN_USERS: '/admin/users',
+  ADMIN_TEMPLATES: '/admin/templates',
+  ADMIN_SENSITIVE_WORDS: '/admin/sensitive-words',
+  NOT_FOUND: '/:pathMatch(.*)*',
+} as const;

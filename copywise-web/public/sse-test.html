@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>SSE Test</title></head>
+<body>
+<h1>SSE 推流测试</h1>
+<div>
+  <label>Token: <input id="token" size="80" placeholder="粘贴 JWT token"></label>
+  <br>
+  <label>AssistantMsgId: <input id="msgId" value="22" size="10"></label>
+  <br>
+  <button onclick="test()">开始测试</button>
+  <button onclick="abort()">中止</button>
+</div>
+<pre id="log" style="background:#111;color:#0f0;padding:16px;min-height:400px;white-space:pre-wrap;font-family:monospace;"></pre>
+
+<script type="module">
+import { fetchEventSource } from '/node_modules/.vite/deps/@microsoft_fetch-event-source.js?v=c6bb736b';
+
+const logEl = document.getElementById('log');
+function log(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+function clearLog() { logEl.textContent = ''; }
+
+let ctrl = null;
+
+window.test = () => {
+  clearLog();
+  const tokenVal = document.getElementById('token').value.trim();
+  const msgId = document.getElementById('msgId').value.trim();
+  if (!tokenVal) { log('❌ 请填写 token'); return; }
+
+  ctrl = new AbortController();
+  log('🚀 发起 SSE 连接...');
+  log('URL: /api/ai/chat/stream?assistantMessageId=' + msgId);
+  log('Token 长度: ' + tokenVal.length + ' 字符');
+
+  let eventCount = 0;
+  fetchEventSource('/api/ai/chat/stream?assistantMessageId=' + encodeURIComponent(msgId), {
+    method: 'GET',
+    headers: { Authorization: 'Bearer ' + tokenVal },
+    signal: ctrl.signal,
+    openWhenHidden: true,
+    async onopen(response) {
+      const ct = response.headers.get('content-type');
+      log('✅ onopen: status=' + response.status + ' content-type=' + ct);
+      if (response.ok && ct && ct.includes('text/event-stream')) {
+        log('✅ 连接建立成功，等待数据...');
+        return;
+      }
+      try {
+        const body = await response.json();
+        log('❌ 响应异常: ' + JSON.stringify(body));
+      } catch { log('❌ 响应异常: status=' + response.status); }
+      throw new Error('连接失败');
+    },
+    onmessage(ev) {
+      eventCount++;
+      if (eventCount <= 5) {
+        log('📨 收到事件 #' + eventCount + ': event="' + ev.event + '" data=' + ev.data.slice(0, 100));
+      }
+
+      // 测试解析
+      try {
+        const outer = JSON.parse(ev.data);
+        const inner = JSON.parse(outer.data);
+        if (eventCount <= 5) {
+          log('  解析: type=' + outer.type + ' payload=' + JSON.stringify(inner).slice(0, 60));
+        }
+        if (outer.type === 'chunk' && inner.delta) {
+          if (eventCount <= 3) log('  delta: "' + inner.delta + '"');
+        }
+        if (outer.type === 'result') {
+          log('🎯 收到 result: messageId=' + inner.messageId);
+        }
+        if (outer.type === 'done') {
+          log('✅ 收到 done: remaining=' + inner.remaining + '/' + inner.max);
+        }
+      } catch (e) {
+        log('❌ 解析失败: ' + e.message);
+      }
+
+      if (eventCount % 20 === 0) {
+        log('... (' + eventCount + ' 个事件已接收)');
+      }
+    },
+    onerror(err) {
+      log('❌ onerror: ' + (err instanceof Error ? err.message : String(err)));
+      throw err;
+    },
+    onclose() {
+      log('🔚 连接关闭，总计收到 ' + eventCount + ' 个事件');
+    },
+  }).catch(err => {
+    if (!ctrl.signal.aborted) {
+      log('❌ 连接异常: ' + (err instanceof Error ? err.message : String(err)));
+    }
+  });
+};
+
+window.abort = () => {
+  if (ctrl) { ctrl.abort(); log('🛑 用户中止'); }
+};
+</script>
+</body>
+</html>

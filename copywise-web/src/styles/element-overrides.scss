@@ -1,0 +1,45 @@
+// =============================================================================
+// Element Plus 移动端全局覆盖
+// =============================================================================
+
+@media (max-width: 767px) {
+  // Dialog 移动端全屏
+  .el-dialog {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    display: flex;
+    flex-direction: column;
+
+    .el-dialog__header {
+      padding: 16px 20px;
+      flex-shrink: 0;
+    }
+
+    .el-dialog__body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    .el-dialog__footer {
+      padding: 12px 20px;
+      flex-shrink: 0;
+    }
+  }
+
+  // MessageBox 移动端全屏
+  .el-message-box {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    border-radius: 0 !important;
+  }
+
+  // 表格横向滚动
+  .el-table {
+    overflow-x: auto;
+  }
+}
