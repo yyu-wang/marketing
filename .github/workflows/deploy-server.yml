@@ -51,7 +51,6 @@ jobs:
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
         run: |
-          sudo mkdir -p /opt/copywise
           sudo cp copywise-server/docker-compose.prod.yml /opt/copywise/docker-compose.prod.yml
           cd /opt/copywise
           echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u "${{ github.actor }}" --password-stdin
