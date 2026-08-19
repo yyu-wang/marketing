@@ -1,0 +1,86 @@
+# =============================================================================
+# Marketing Wise 生产部署编排
+#
+# 首次部署：
+#   docker compose -f docker-compose.prod.yml up -d
+#
+# 更新部署（拉取最新镜像并重启）：
+#   docker compose -f docker-compose.prod.yml pull api
+#   docker compose -f docker-compose.prod.yml up -d
+# =============================================================================
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: marketing-wise-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: copywise_root
+      MYSQL_DATABASE: copywise
+      TZ: Asia/Shanghai
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    ports:
+      - '3306:3306'
+    volumes:
+      - marketing-wise-mysql-data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    container_name: marketing-wise-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - marketing-wise-redis-data:/data
+
+  api:
+    image: ghcr.io/yyu-wang/copywise-server:dev
+    container_name: marketing-wise-api
+    restart: unless-stopped
+    depends_on:
+      - mysql
+      - redis
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DB_HOST: mysql
+      REDIS_HOST: redis
+    ports:
+      - '3000:3000'
+    volumes:
+      - marketing-wise-uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "node", "-e", "const h=require('http');h.get('http://localhost:3000/api/health',r=>{process.exit(r.statusCode===200?0:1)}).on('error',()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 20s
+
+  web:
+    image: ghcr.io/yyu-wang/copywise-web:dev
+    container_name: marketing-wise-web
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '8081:80'
+
+  admin:
+    image: ghcr.io/yyu-wang/copywise-admin:dev
+    container_name: marketing-wise-admin
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '8082:80'
+
+volumes:
+  marketing-wise-mysql-data:
+  marketing-wise-redis-data:
+  marketing-wise-uploads:
