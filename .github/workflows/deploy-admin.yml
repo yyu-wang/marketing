@@ -43,18 +43,15 @@ jobs:
 
   deploy:
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /opt/copywise
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose -f docker-compose.prod.yml stop admin
-            docker compose -f docker-compose.prod.yml rm -f admin
-            docker compose -f docker-compose.prod.yml pull admin
-            docker compose -f docker-compose.prod.yml up -d --no-deps admin
+      - name: Deploy Admin
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          cd /opt/copywise
+          echo "$GHCR_TOKEN" | sudo docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          sudo docker compose -f docker-compose.prod.yml stop admin
+          sudo docker compose -f docker-compose.prod.yml rm -f admin
+          sudo docker compose -f docker-compose.prod.yml pull admin
+          sudo docker compose -f docker-compose.prod.yml up -d --no-deps admin
