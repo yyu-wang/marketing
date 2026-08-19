@@ -27,8 +27,53 @@
         新建对话
       </el-button>
 
-      <div v-loading="store.listLoading" class="chat-sidebar__list">
-        <template v-if="store.list.length">
+      <div
+        ref="listEl"
+        v-loading="store.listLoading"
+        class="chat-sidebar__list"
+        @scroll="onListScroll"
+      >
+        <template v-if="useVirtual">
+          <div class="chat-sidebar__virtual" :style="{ height: `${totalHeight}px` }">
+            <div
+              v-for="{ row, offset } in visibleRows"
+              :key="row.key"
+              class="chat-sidebar__virtual-row"
+              :style="{ top: `${offset}px` }"
+            >
+              <div v-if="row.kind === 'group'" class="chat-sidebar__group-title">
+                {{ row.date }}
+              </div>
+              <div
+                v-else
+                class="chat-sidebar__item"
+                :class="{ 'is-active': row.item.id === store.currentId }"
+                @click="onOpen(row.item.id)"
+              >
+                <span class="chat-sidebar__item-title" :title="row.item.title">
+                  {{ row.item.title }}
+                </span>
+                <el-dropdown
+                  trigger="click"
+                  @command="(cmd: string) => onAction(cmd, row.item)"
+                  @click.stop
+                >
+                  <el-icon class="chat-sidebar__item-more"><MoreFilled /></el-icon>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <el-dropdown-item command="rename">重命名</el-dropdown-item>
+                      <el-dropdown-item command="delete" divided>
+                        <span class="text-danger">删除</span>
+                      </el-dropdown-item>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <template v-else-if="store.list.length">
           <div
             v-for="group in store.list"
             :key="group.date"
@@ -63,6 +108,7 @@
             </div>
           </div>
         </template>
+
         <div v-else-if="!store.listLoading" class="chat-sidebar__empty">
           暂无历史对话
         </div>
@@ -76,15 +122,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { MoreFilled, Plus, Search } from '@element-plus/icons-vue'
 import UserMenu from '@/components/layout/UserMenu.vue'
+import { useVirtualList } from '@/composables/useVirtualList'
 import { useConversationStore } from '@/stores/conversation'
 import type { ConversationSummary } from '@/types/conversation'
 
 const SEARCH_DEBOUNCE_MS = 300
+const GROUP_TITLE_HEIGHT = 24
+const ITEM_HEIGHT = 44
+const VIRTUAL_THRESHOLD = 100
+const VIRTUAL_BUFFER = 5
+
+type SidebarRow =
+  | { key: string; kind: 'group'; height: number; date: string }
+  | { key: string; kind: 'item'; height: number; item: ConversationSummary }
 
 const emit = defineEmits<{ (e: 'select'): void }>()
 
@@ -104,6 +159,51 @@ const onSearchInput = () => {
 const onSearchClear = () => {
   store.fetchList()
 }
+
+const listEl = ref<HTMLElement | null>(null)
+const viewportHeight = ref(0)
+
+const virtualRows = computed<SidebarRow[]>(() => {
+  const rows: SidebarRow[] = []
+  for (const group of store.list) {
+    rows.push({
+      key: `g:${group.date}`,
+      kind: 'group',
+      height: GROUP_TITLE_HEIGHT,
+      date: group.date,
+    })
+    for (const item of group.items) {
+      rows.push({ key: `i:${item.id}`, kind: 'item', height: ITEM_HEIGHT, item })
+    }
+  }
+  return rows
+})
+
+const useVirtual = computed(() => virtualRows.value.length > VIRTUAL_THRESHOLD)
+
+const {
+  onScroll: onListScroll,
+  visible: visibleRows,
+  totalHeight,
+} = useVirtualList(
+  () => virtualRows.value,
+  () => viewportHeight.value,
+  VIRTUAL_BUFFER,
+)
+
+let resizeObserver: ResizeObserver | null = null
+onMounted(() => {
+  if (listEl.value) {
+    resizeObserver = new ResizeObserver(() => {
+      viewportHeight.value = listEl.value?.clientHeight ?? 0
+    })
+    resizeObserver.observe(listEl.value)
+  }
+})
+onUnmounted(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+})
 
 function onNew() {
   store.newConversation()
@@ -211,6 +311,16 @@ async function onAction(cmd: string, item: ConversationSummary) {
     min-height: 0;
     overflow-y: auto;
     padding-right: 4px;
+  }
+
+  &__virtual {
+    position: relative;
+  }
+
+  &__virtual-row {
+    position: absolute;
+    left: 0;
+    right: 0;
   }
 
   &__group + &__group {
