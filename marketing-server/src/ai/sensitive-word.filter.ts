@@ -30,30 +30,36 @@ interface ReloadMessage {
 export class SensitiveWordFilter implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SensitiveWordFilter.name);
   private root: TrieNode = { children: new Map(), isEnd: false, word: '' };
+  /** 独立 Pub/Sub 连接：subscribe() 会将该连接置为订阅模式，
+   *  必须与共享连接（get/set/publish）分离，否则全站 Redis 读写抛错 */
+  private readonly pubSubClient: Redis;
 
   constructor(
     @InjectRepository(SensitiveWordEntity)
     private readonly wordRepo: Repository<SensitiveWordEntity>,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
-  ) {}
+  ) {
+    this.pubSubClient = redis.duplicate();
+  }
 
   async onModuleInit(): Promise<void> {
     await this.reloadSafe();
     try {
-      await this.redis.subscribe(SENSITIVE_WORD_CHANNEL);
+      await this.pubSubClient.subscribe(SENSITIVE_WORD_CHANNEL);
     } catch (err) {
       this.logger.warn(`敏感词热更新订阅失败，仅支持本机重载: ${err?.message ?? err}`);
     }
-    this.redis.on('message', this.handleMessage);
+    this.pubSubClient.on('message', this.handleMessage);
   }
 
   async onModuleDestroy(): Promise<void> {
-    this.redis.off('message', this.handleMessage);
+    this.pubSubClient.off('message', this.handleMessage);
     try {
-      await this.redis.unsubscribe(SENSITIVE_WORD_CHANNEL);
+      await this.pubSubClient.unsubscribe(SENSITIVE_WORD_CHANNEL);
     } catch {
       /* 连接可能已关闭，忽略 */
     }
+    this.pubSubClient.disconnect();
   }
 
   /**

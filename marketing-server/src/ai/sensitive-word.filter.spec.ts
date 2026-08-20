@@ -19,9 +19,12 @@ describe('SensitiveWordFilter', () => {
   let wordRepo: { find: jest.Mock };
   let messageHandler: (channel: string, message: string) => void;
   let redis: {
+    duplicate: jest.Mock;
+    publish: jest.Mock;
+  };
+  let subClient: {
     subscribe: jest.Mock;
     unsubscribe: jest.Mock;
-    publish: jest.Mock;
     on: jest.Mock;
     off: jest.Mock;
   };
@@ -31,15 +34,18 @@ describe('SensitiveWordFilter', () => {
       find: jest.fn().mockResolvedValue([]),
     };
     messageHandler = () => {};
-    redis = {
+    subClient = {
       subscribe: jest.fn().mockResolvedValue(undefined),
       unsubscribe: jest.fn().mockResolvedValue(undefined),
-      publish: jest.fn().mockResolvedValue(0),
       on: jest.fn((event: string, cb: (c: string, m: string) => void) => {
         if (event === 'message') messageHandler = cb;
-        return redis;
+        return subClient;
       }),
       off: jest.fn(),
+    };
+    redis = {
+      duplicate: jest.fn().mockReturnValue(subClient),
+      publish: jest.fn().mockResolvedValue(0),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -65,8 +71,9 @@ describe('SensitiveWordFilter', () => {
       where: { isActive: true },
       select: ['word'],
     });
-    expect(redis.subscribe).toHaveBeenCalledWith(CHANNEL);
-    expect(redis.on).toHaveBeenCalledWith('message', expect.any(Function));
+    expect(subClient.subscribe).toHaveBeenCalledWith(CHANNEL);
+    expect(subClient.on).toHaveBeenCalledWith('message', expect.any(Function));
+    expect(redis.duplicate).toHaveBeenCalledTimes(1);
     expect(filter.contains('包含违禁词A的文本')).toBe(true);
     expect(filter.contains('正常文本')).toBe(false);
   });
