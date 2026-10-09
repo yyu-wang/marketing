@@ -26,13 +26,14 @@ export interface GenerateStreamOptions {
  * AI Provider 抽象接口
  *
  * 对应 PRD 7.4 可扩展性："AI 调用层独立成模块，可替换不同供应商"。
- * 当前默认实现：QwenProvider（通义千问）。
+ * 内置实现：QwenProvider（通义千问）/ DeepSeekProvider（DeepSeek），
+ * 由 AI_PROVIDER 环境变量选择。
  *
  * V2：接口从纯 prompt 字符串升级为 Chat Completions messages，
- * 以支持通义千问视觉模型（图片 + 文本）。
+ * 以支持视觉模型（图片 + 文本）。
  */
 export interface AIProvider {
-  /** Provider 名称（如 qwen / openai） */
+  /** Provider 名称（如 qwen / deepseek） */
   readonly name: string;
 
   /**

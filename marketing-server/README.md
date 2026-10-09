@@ -8,7 +8,7 @@ Marketing Wise（智能营销文案助手）的后端实现，基于 **NestJS + 
 src/
 ├── admin/              # 管理后台：user-management / template-management / sensitive-word
 ├── ai/                 # AI 文案生成（SSE 流式 + 敏感词过滤）
-├── ai-provider/        # AIProvider 抽象与实现（Qwen 文本 / 视觉模型）
+├── ai-provider/        # AIProvider 抽象与实现（Qwen / DeepSeek，OpenAI 兼容协议）
 ├── analytics/          # 数据看板（渠道占比 / 收藏排行 / 7 日趋势）
 ├── auth/               # 注册、登录、JWT 策略、个人资料
 ├── common/             # 全局过滤器、拦截器、装饰器、守卫
@@ -71,7 +71,7 @@ npm run start:dev
 | `JWT_EXPIRES_IN` | `7d` | 令牌有效期 |
 | `QUOTA_DAILY_DEFAULT` | `10` | 每日默认额度上限 |
 | `QUOTA_TZ` | `Asia/Shanghai` | 自然日重置时区（UTC+8） |
-| `AI_PROVIDER` | `qwen` | AI Provider：`qwen` / `openai` |
+| `AI_PROVIDER` | `qwen` | AI Provider：`qwen` / `deepseek` |
 | `AI_API_KEY` | - | AI 服务密钥（必填） |
 | `AI_BASE_URL` | - | OpenAI 兼容接口地址 |
 | `AI_MODEL` | `qwen3-omni-flash` | 纯文本模型 |
